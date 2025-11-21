@@ -468,43 +468,43 @@ public:
     int getTurn() { return turn; }
 };
 
-int main() {
-    ChessGame game;
+// int main() {
+//     ChessGame game;
     
-    cout << "Chess Game Started!\n";
-    cout << "Move format: e2e4 (from-square to-square)\n";
-    cout << "Type 'log' to view game history\n\n";
+//     cout << "Chess Game Started!\n";
+//     cout << "Move format: e2e4 (from-square to-square)\n";
+//     cout << "Type 'log' to view game history\n\n";
     
-    game.displayBoard();
+//     game.displayBoard();
     
-    string input;
-    while (!game.isEnded()) {
-        cout << "\nTurn " << (game.getTurn() + 1) << " (" 
-             << (game.getTurn() % 2 == 0 ? "White" : "Black") << "): ";
-        cin >> input;
+//     string input;
+//     while (!game.isEnded()) {
+//         cout << "\nTurn " << (game.getTurn() + 1) << " (" 
+//              << (game.getTurn() % 2 == 0 ? "White" : "Black") << "): ";
+//         cin >> input;
         
-        if (input == "log") {
-            game.displayGameLog();
-            continue;
-        }
+//         if (input == "log") {
+//             game.displayGameLog();
+//             continue;
+//         }
         
-        if (game.move(input)) {
-            cout << "Move executed successfully!\n";
-            game.displayBoard();
-        } else {
-            cout << "Invalid move! Try again.\n";
-        }
-    }
+//         if (game.move(input)) {
+//             cout << "Move executed successfully!\n";
+//             game.displayBoard();
+//         } else {
+//             cout << "Invalid move! Try again.\n";
+//         }
+//     }
     
-    cout << "\nGame Over! Result: ";
-    switch (game.getResult()) {
-        case WHITE_WIN: cout << "White wins!\n"; break;
-        case BLACK_WIN: cout << "Black wins!\n"; break;
-        case DRAW: cout << "Draw!\n"; break;
-        default: cout << "Unknown\n";
-    }
+//     cout << "\nGame Over! Result: ";
+//     switch (game.getResult()) {
+//         case WHITE_WIN: cout << "White wins!\n"; break;
+//         case BLACK_WIN: cout << "Black wins!\n"; break;
+//         case DRAW: cout << "Draw!\n"; break;
+//         default: cout << "Unknown\n";
+//     }
     
-    game.displayGameLog();
+//     game.displayGameLog();
     
-    return 0;
-}
+//     return 0;
+// }
