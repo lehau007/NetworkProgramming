@@ -15,7 +15,72 @@ Messages are categorized by direction and purpose:
 
 ---
 
-## 1. Authentication Messages
+## 1. Connection & Session Verification
+
+### Initial Connection Flow
+
+**When a client first connects to the server, the protocol requires:**
+
+1. **WebSocket/TCP connection established**
+2. **Client MUST send one of:**
+   - `VERIFY_SESSION` - If client has a previous session_id (reconnection)
+   - `LOGIN` - If client needs to authenticate
+   - `REGISTER` - If client is creating new account
+
+**Session verification is the FIRST action after connection establishment.**
+
+### CLIENT → SERVER
+
+#### VERIFY_SESSION (FIRST MESSAGE)
+**Purpose**: Verify existing session_id after connection/reconnection
+
+```json
+{
+    "type": "VERIFY_SESSION",
+    "session_id": "abc123def456...",
+    "timestamp": 1700000000
+}
+```
+
+### SERVER → CLIENT (Responses)
+
+#### SESSION_VALID
+**Purpose**: Confirm session is valid and restore connection
+
+```json
+{
+    "type": "SESSION_VALID",
+    "session_id": "abc123def456...",
+    "user_data": {
+        "user_id": 123,
+        "username": "player1",
+        "wins": 10,
+        "losses": 5,
+        "draws": 2,
+        "rating": 1450
+    },
+    "active_game_id": 456,  // null if not in game
+    "last_activity": 1700000000,
+    "message": "Session restored successfully"
+}
+```
+
+#### SESSION_INVALID
+**Purpose**: Inform client that session_id is invalid/expired
+
+```json
+{
+    "type": "SESSION_INVALID",
+    "reason": "expired",  // "expired", "not_found", "invalid"
+    "message": "Session expired. Please log in again."
+}
+```
+
+**Note:** After receiving `SESSION_INVALID`, client MUST send `LOGIN` or `REGISTER`.
+
+---
+
+## 2. Authentication Messages
 
 ### CLIENT → SERVER
 
@@ -623,8 +688,15 @@ Messages are categorized by direction and purpose:
 
 ## Message Flow Summary
 
+### Connection Flow (REQUIRED FIRST)
+**Immediately after TCP/WebSocket connection:**
+- VERIFY_SESSION → SESSION_VALID / SESSION_INVALID (if client has session_id)
+- LOGIN → LOGIN_RESPONSE (if no session_id or session invalid)
+- REGISTER → REGISTER_RESPONSE (if creating new account)
+
 ### Client-Initiated (Request/Response)
 All these require user action:
+- VERIFY_SESSION → SESSION_VALID / SESSION_INVALID
 - LOGIN → LOGIN_RESPONSE
 - REGISTER → REGISTER_RESPONSE
 - GET_AVAILABLE_PLAYERS → PLAYER_LIST
@@ -691,6 +763,11 @@ All these require user action:
 
 ```cpp
 enum class MessageType {
+    // Connection & Session
+    VERIFY_SESSION,
+    SESSION_VALID,
+    SESSION_INVALID,
+    
     // Authentication
     LOGIN,
     LOGIN_RESPONSE,
@@ -752,6 +829,11 @@ enum class MessageType {
 
 ```python
 class MessageType:
+    # Connection & Session
+    VERIFY_SESSION = "VERIFY_SESSION"
+    SESSION_VALID = "SESSION_VALID"
+    SESSION_INVALID = "SESSION_INVALID"
+    
     # Authentication
     LOGIN = "LOGIN"
     LOGIN_RESPONSE = "LOGIN_RESPONSE"
