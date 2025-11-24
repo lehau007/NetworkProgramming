@@ -13,7 +13,9 @@ class DatabaseConnection {
 private:
     static map<string, string> loadEnv() {
         map<string, string> env;
-        ifstream file("../config/.env");
+
+        // Use absolute path for .env file but in linux
+        ifstream file("/mnt/c/Users/msilaptop/Desktop/NetworkProgramming/Project/server/config/.env");
         string line;
         
         if (!file.is_open()) {
@@ -63,27 +65,27 @@ public:
     }
 };
 
-int main() {
-    cout << "Testing database connection..." << endl;
-    cout << "Loading configuration from .env file..." << endl;
+// int main() {
+//     cout << "Testing database connection..." << endl;
+//     cout << "Loading configuration from .env file..." << endl;
     
-    try {
-        cout << "Attempting to connect to database..." << endl;
-        auto env = DatabaseConnection::execute_query("select * from users");
+//     try {
+//         cout << "Attempting to connect to database..." << endl;
+//         auto env = DatabaseConnection::execute_query("select * from users");
 
-        cout << "Connection successful! Users found:" << endl;
-        for (auto row : env)
-            std::cout << "  - " << row["username"].c_str() << "\n";
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        std::cerr << "\nTroubleshooting tips:" << endl;
-        std::cerr << "1. Check if PostgreSQL is running on Windows" << endl;
-        std::cerr << "2. Verify pg_hba.conf allows connections from WSL" << endl;
-        std::cerr << "3. Check Windows Firewall allows port 5432" << endl;
-        std::cerr << "4. Verify .env file has correct credentials" << endl;
-        return 1;
-    }
+//         cout << "Connection successful! Users found:" << endl;
+//         for (auto row : env)
+//             std::cout << "  - " << row["username"].c_str() << "\n";
+//     }
+//     catch (const std::exception& e) {
+//         std::cerr << "Error: " << e.what() << "\n";
+//         std::cerr << "\nTroubleshooting tips:" << endl;
+//         std::cerr << "1. Check if PostgreSQL is running on Windows" << endl;
+//         std::cerr << "2. Verify pg_hba.conf allows connections from WSL" << endl;
+//         std::cerr << "3. Check Windows Firewall allows port 5432" << endl;
+//         std::cerr << "4. Verify .env file has correct credentials" << endl;
+//         return 1;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
