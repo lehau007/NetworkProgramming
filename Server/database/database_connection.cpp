@@ -13,7 +13,7 @@ class DatabaseConnection {
 private:
     static map<string, string> loadEnv() {
         map<string, string> env;
-        ifstream file(".env");
+        ifstream file("../config/.env");
         string line;
         
         if (!file.is_open()) {

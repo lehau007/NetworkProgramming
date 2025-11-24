@@ -13,8 +13,13 @@
 
 using namespace std;
 
+struct ClientThreadArgs {
+    int client_socket;
+};
 
-void handle_client_connection() {
+void* handle_client_connection(void *arg) {
+    ClientThreadArgs* args = (ClientThreadArgs*)arg;
+    int client_socket = args->client_socket;
      
 }
 
