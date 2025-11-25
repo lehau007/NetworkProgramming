@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #333;
+            color: #fff;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            perspective: 1000px;
+        }
+        .panel {
+            background-color: #444;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.5s, opacity 0.5s;
+            width: 350px;
+        }
+        .hidden {
+            display: none;
+            opacity: 0;
+            transform: rotateY(-30deg) scale(0.9);
+        }
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"], input[type="email"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #555;
+            color: #fff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+        #chessboard {
+            width: 480px;
+            height: 480px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            border: 4px solid #666;
+            border-radius: 8px;
+        }
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            transition: background-color 0.2s;
+        }
+        .light { background-color: #f0d9b5; }
+        .dark { background-color: #b58863; }
+        .piece { cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .selected { background-color: yellow !important; }
+
+        #player-list div {
+            padding: 8px;
+            border-bottom: 1px solid #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #player-list button {
+            width: auto;
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-top: 0;
+        }
+        #messages {
+            height: 250px;
+            overflow-y: auto;
+            border: 1px solid #555;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        .message { padding: 5px; border-radius: 3px; }
+        .system { color: #ffab40; }
+        .sent { color: #81d4fa; }
+        .received { color: #c5e1a5; }
+
+        #game-state p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="login-section" class="panel">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Login</button>
+            <button onclick="showRegister()">Register</button>
+        </div>
+
+        <!-- Register Section -->
+        <div id="register-section" class="panel hidden">
+            <h2>Register</h2>
+            <input type="text" id="reg-username" placeholder="Username">
+            <input type="password" id="reg-password" placeholder="Password">
+            <input type="email" id="reg-email" placeholder="Email">
+            <button onclick="register()">Register</button>
+            <button onclick="showLogin()">Back to Login</button>
+        </div>
+
+        <!-- Lobby Section -->
+        <div id="lobby-section" class="panel hidden">
+            <h2>Lobby</h2>
+            <div id="player-list"></div>
+            <button onclick="getAvailablePlayers()">Refresh Players</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden">
+            <div class="panel">
+                <div id="chessboard"></div>
+            </div>
+            <div class="panel">
+                <h2>Game Info</h2>
+                <div id="game-state"></div>
+                <div id="messages"></div>
+                <button onclick="resign()">Resign</button>
+                <button onclick="offerDraw()">Offer Draw</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wsUrl = "ws://localhost:8080";
+        let ws = null;
+        let session_id = null;
+        let username = null;
+        let currentGameId = null;
+
+        // UI Elements
+        const loginSection = document.getElementById('login-section');
+        const registerSection = document.getElementById('register-section');
+        const lobbySection = document.getElementById('lobby-section');
+        const gameSection = document.getElementById('game-section');
+        const messagesDiv = document.getElementById('messages');
+
+        // UI Navigation
+        function showLogin() {
+            loginSection.classList.remove('hidden');
+            registerSection.classList.add('hidden');
+            lobbySection.classList.add('hidden');
+            gameSection.classList.add('hidden');
+        }
+
+        function showRegister() {
+            loginSection.classList.add('hidden');
+            registerSection.classList.remove('hidden');
+            lobbySection.classList.add('hidden');
+            gameSection.classList.add('hidden');
+        }
+
+        function showLobby() {
+            loginSection.classList.add('hidden');
+            registerSection.classList.add('hidden');
+            lobbySection.classList.remove('hidden');
+            gameSection.classList.add('hidden');
+        }
+
+        function showGame() {
+            loginSection.classList.add('hidden');
+            registerSection.classList.add('hidden');
+            lobbySection.classList.add('hidden');
+            gameSection.classList.remove('hidden');
+        }
+
+        function addMessage(text, type = 'system') {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = text;
+            messageDiv.className = type;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connect() {
+            if (ws) {
+                ws.close();
+            }
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                addMessage("Connected to server.", 'system');
+                // If we have a session ID, try to verify it
+                const saved_session = localStorage.getItem('session_id');
+                if (saved_session) {
+                    session_id = saved_session;
+                    username = localStorage.getItem('username');
+                    send({ type: 'VERIFY_SESSION', session_id: session_id });
+                } else {
+                    showLogin();
+                }
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                addMessage(`Received: ${event.data}`, 'received');
+                handleMessage(msg);
+            };
+
+            ws.onclose = () => {
+                addMessage("Disconnected from server.", 'system');
+                ws = null;
+                showLogin();
+            };
+
+            ws.onerror = (error) => {
+                addMessage("WebSocket error.", 'system');
+                console.error("WebSocket Error: ", error);
+            };
+        }
+
+        function send(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const msgString = JSON.stringify(data);
+                ws.send(msgString);
+                addMessage(`Sent: ${msgString}`, 'sent');
+            } else {
+                addMessage("Not connected to server.", 'system');
+            }
+        }
+
+        function handleMessage(msg) {
+            switch (msg.type) {
+                case 'SESSION_VALID':
+                    session_id = msg.session_id;
+                    username = msg.user_data.username;
+                    localStorage.setItem('session_id', session_id);
+                    localStorage.setItem('username', username);
+                    showLobby();
+                    getAvailablePlayers();
+                    break;
+                case 'SESSION_INVALID':
+                    localStorage.removeItem('session_id');
+                    localStorage.removeItem('username');
+                    session_id = null;
+                    username = null;
+                    showLogin();
+                    break;
+                case 'LOGIN_RESPONSE':
+                    if (msg.status === 'success') {
+                        session_id = msg.session_id;
+                        username = msg.user_data.username;
+                        localStorage.setItem('session_id', session_id);
+                        localStorage.setItem('username', username);
+                        showLobby();
+                        getAvailablePlayers();
+                    } else {
+                        alert(`Login failed: ${msg.message}`);
+                    }
+                    break;
+                case 'REGISTER_RESPONSE':
+                    if (msg.status === 'success') {
+                        alert('Registration successful! Please login.');
+                        showLogin();
+                    } else {
+                        alert(`Registration failed: ${msg.message}`);
+                    }
+                    break;
+case 'DRAW_OFFER_RECEIVED':
+                    if (confirm('Your opponent has offered a draw. Do you accept?')) {
+                        respondToDrawOffer(true);
+                    } else {
+                        respondToDrawOffer(false);
+                    }
+                    break;
+                case 'MOVE_ACCEPTED':
+                    // The server will send an OPPONENT_MOVE to the other player, 
+                    // and a GAME_STATE to the current player.
+                    // We can also update the board optimistically.
+                    send({ type: 'GET_GAME_STATE', session_id: session_id, game_id: currentGameId });
+                    break;
+                case 'MOVE_REJECTED':
+                    alert(`Move rejected: ${msg.reason}`);
+                    break;
+                case 'GAME_ENDED':
+                    alert(`Game over: ${msg.reason}`);
+                    showLobby();
+                    break;
+                case 'PLAYER_LIST':
+                    const playerListDiv = document.getElementById('player-list');
+                    playerListDiv.innerHTML = '<h3>Available Players</h3>';
+                    msg.players.forEach(player => {
+                        if (player.username !== username) {
+                            const playerDiv = document.createElement('div');
+                            playerDiv.innerHTML = `<span>${player.username} (${player.rating})</span>`;
+                            const challengeButton = document.createElement('button');
+                            challengeButton.textContent = 'Challenge';
+                            challengeButton.onclick = () => challengePlayer(player.username);
+                            playerDiv.appendChild(challengeButton);
+                            playerListDiv.appendChild(playerDiv);
+                        }
+                    });
+                    break;
+                case 'CHALLENGE_RECEIVED':
+                    const from = msg.from_username;
+                    if (confirm(`You have received a challenge from ${from}. Do you accept?`)) {
+                        send({ type: 'ACCEPT_CHALLENGE', session_id: session_id, challenge_id: msg.challenge_id });
+                    } else {
+                        send({ type: 'DECLINE_CHALLENGE', session_id: session_id, challenge_id: msg.challenge_id });
+                    }
+                    break;
+                case 'MATCH_STARTED':
+                    currentGameId = msg.game_id;
+                    showGame();
+                    send({ type: 'GET_GAME_STATE', session_id: session_id, game_id: msg.game_id });
+                    break;
+                case 'GAME_STATE':
+                    currentGameId = msg.game_id;
+                    updateGameState(msg);
+                    showGame();
+                    break;
+                case 'OPPONENT_MOVE':
+                    updateGameState(msg);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function resign() {
+            send({
+                type: 'RESIGN',
+                session_id: session_id,
+                game_id: currentGameId
+            });
+        }
+
+        function offerDraw() {
+            send({
+                type: 'DRAW_OFFER',
+                session_id: session_id,
+                game_id: currentGameId
+            });
+        }
+
+        function respondToDrawOffer(accepted) {
+            send({
+                type: 'DRAW_RESPONSE',
+                session_id: session_id,
+                game_id: currentGameId,
+                accepted: accepted
+            });
+        }
+
+        function challengePlayer(targetUsername) {
+            send({
+                type: 'CHALLENGE',
+                session_id: session_id,
+                target_username: targetUsername
+            });
+        }
+
+        function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (!user || !pass) {
+                alert('Please enter username and password');
+                return;
+            }
+            send({
+                type: 'LOGIN',
+                username: user,
+                password: pass
+            });
+        }
+
+        function register() {
+            const user = document.getElementById('reg-username').value;
+            const pass = document.getElementById('reg-password').value;
+            const email = document.getElementById('reg-email').value;
+            if (!user || !pass) {
+                alert('Please enter username and password');
+                return;
+            }
+            send({
+                type: 'REGISTER',
+                username: user,
+                password: pass,
+                email: email
+            });
+        }
+
+        function getAvailablePlayers() {
+            if (!session_id) {
+                alert('Not logged in');
+                return;
+            }
+            send({
+                type: 'GET_AVAILABLE_PLAYERS',
+                session_id: session_id
+            });
+        }
+
+        function logout() {
+            if (session_id) {
+                send({
+                    type: 'LOGOUT',
+                    session_id: session_id
+                });
+            }
+            localStorage.removeItem('session_id');
+            localStorage.removeItem('username');
+            session_id = null;
+            username = null;
+            currentGameId = null;
+            if (ws) {
+                ws.close();
+            }
+            showLogin();
+        }
+
+
+
+
+        function createChessboard() {
+            const chessboard = document.getElementById('chessboard');
+            chessboard.innerHTML = '';
+            for (let i = 0; i < 64; i++) {
+                const square = document.createElement('div');
+                const row = Math.floor(i / 8);
+                const col = i % 8;
+                square.classList.add('square');
+                if ((row + col) % 2 === 0) {
+                    square.classList.add('light');
+                } else {
+                    square.classList.add('dark');
+                }
+                square.dataset.index = i;
+                square.onclick = () => onSquareClick(i);
+                chessboard.appendChild(square);
+            }
+        }
+
+        function renderPieces(boardState) {
+            // boardState is a FEN string
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(s => s.innerHTML = ''); // Clear board
+            const pieceMap = {
+                'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔',
+                'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
+            };
+            const rows = boardState.split(' ')[0].split('/');
+            let i = 0;
+            rows.forEach(row => {
+                for (const char of row) {
+                    if (isNaN(char)) {
+                        const piece = document.createElement('span');
+                        piece.classList.add('piece');
+                        piece.textContent = pieceMap[char];
+                        squares[i].appendChild(piece);
+                        i++;
+                    } else {
+                        i += parseInt(char);
+                    }
+                }
+            });
+        }
+        
+        let selectedSquare = null;
+
+        function onSquareClick(index) {
+            if (selectedSquare === null) {
+                // If no piece is selected, select the clicked square if it has a piece
+                const square = document.querySelector(`.square[data-index='${index}']`);
+                if (square.hasChildNodes()) {
+                    selectedSquare = index;
+                    square.classList.add('selected');
+                }
+            } else {
+                // If a piece is already selected, this is the destination square
+                const from = selectedSquare;
+                const to = index;
+                const move = {
+                    type: 'MOVE',
+                    session_id: session_id,
+                    game_id: currentGameId, // Assuming currentGameId is stored somewhere
+                    move: `${toAlgebraic(from)}${toAlgebraic(to)}`
+                };
+                send(move);
+
+                // Reset selection
+                document.querySelector(`.square[data-index='${from}']`).classList.remove('selected');
+                selectedSquare = null;
+            }
+        }
+        
+        function toAlgebraic(index) {
+            const row = 8 - Math.floor(index / 8);
+            const col = String.fromCharCode('a'.charCodeAt(0) + (index % 8));
+            return `${col}${row}`;
+        }
+        
+        function updateGameState(gameState) {
+            const gameStateDiv = document.getElementById('game-state');
+            gameStateDiv.innerHTML = `
+                <p><strong>Turn:</strong> ${gameState.current_turn}</p>
+                <p><strong>White:</strong> ${gameState.white_player}</p>
+                <p><strong>Black:</strong> ${gameState.black_player}</p>
+            `;
+            renderPieces(gameState.board_state);
+        }
+        
+        createChessboard();
+
+        // Start the connection when the page loads
+        window.onload = connect;
+    </script>
+</body>
+</html>
