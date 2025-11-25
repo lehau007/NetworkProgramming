@@ -1,1 +1,0 @@
-g++ -std=c++17 your_program.cpp -lpqxx -lpq -o your_program
