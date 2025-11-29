@@ -57,6 +57,7 @@ public:
             pqxx::connection c(getConnectionString());
             pqxx::work txn(c);
             auto result = txn.exec(query);
+            txn.commit();
             return result;
         } catch (const std::exception& e) {
             cerr << e.what() << endl;
