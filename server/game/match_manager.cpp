@@ -433,6 +433,69 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
     return true;
 }
 
+bool MatchManager::handle_player_disconnect(int user_id) {
+    int game_id = get_game_id_by_player(user_id);
+    if (game_id == -1) {
+        return false;  // Player not in a game
+    }
+    
+    GameInstance* game = get_game(game_id);
+    if (!game || !game->is_active) {
+        return false;
+    }
+    
+    bool player_is_white = (user_id == game->white_player_id);
+    int winner_id = player_is_white ? game->black_player_id : game->white_player_id;
+    std::string winner_username = player_is_white ? game->black_username : game->white_username;
+    std::string loser_username = player_is_white ? game->white_username : game->black_username;
+    std::string result = player_is_white ? "BLACK_WIN" : "WHITE_WIN";
+    
+    // Mark game as inactive
+    pthread_mutex_lock(&mutex);
+    game->is_active = false;
+    
+    // Convert moves to JSON string
+    json moves_json = json::array();
+    for (const auto& move : game->move_history) {
+        moves_json.push_back(move);
+    }
+    std::string moves_str = moves_json.dump();
+    pthread_mutex_unlock(&mutex);
+    
+    // Update database
+    GameRepository::end_game(game_id, result, moves_str);
+    
+    // Update user stats
+    if (result == "WHITE_WIN") {
+        UserRepository::increment_wins(game->white_player_id);
+        UserRepository::increment_losses(game->black_player_id);
+    } else {
+        UserRepository::increment_wins(game->black_player_id);
+        UserRepository::increment_losses(game->white_player_id);
+    }
+    
+    // Only notify the opponent (winner), NOT the disconnected player
+    json game_ended;
+    game_ended["type"] = "GAME_ENDED";
+    game_ended["game_id"] = game_id;
+    game_ended["result"] = result;
+    game_ended["reason"] = "opponent_disconnected";
+    game_ended["winner"] = winner_username;
+    game_ended["loser"] = loser_username;
+    game_ended["move_count"] = game->move_history.size();
+    game_ended["duration_seconds"] = std::time(nullptr) - game->start_time;
+    
+    broadcast_to_user(winner_id, game_ended);  // Only send to winner (opponent)
+    
+    std::cout << "[MatchManager] Player " << user_id << " disconnected from game " << game_id 
+              << ", " << winner_username << " wins" << std::endl;
+    
+    // Cleanup game
+    cleanup_game(game_id);
+    
+    return true;
+}
+
 bool MatchManager::resign_game(int game_id, int player_id, int& out_winner_id, int& out_loser_id) {
     GameInstance* game = get_game(game_id);
     if (!game || !game->is_active) {
