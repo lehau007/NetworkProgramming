@@ -858,6 +858,7 @@ void MessageHandler::handle_get_game_state(const json& request) {
     response["move_history"] = state["move_history"];
     response["is_active"] = state["is_active"];
     response["is_ended"] = state["is_ended"];
+    response["board_state"] = state["board_state"];
     
     if (state.contains("result")) {
         response["result"] = state["result"];

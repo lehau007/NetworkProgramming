@@ -413,6 +413,10 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
     opponent_move["is_check"] = false;
     opponent_move["captured_piece"] = nullptr;
     opponent_move["timestamp"] = std::time(nullptr);
+    opponent_move["board_state"] = game->chess_engine->getFEN();  
+    opponent_move["current_turn"] = (game->chess_engine->getTurn() % 2 == 0) ? "white" : "black";  
+    opponent_move["white_player"] = game->white_username;  
+    opponent_move["black_player"] = game->black_username;  
     
     pthread_mutex_unlock(&mutex);
     
@@ -609,6 +613,7 @@ json MatchManager::get_game_state(int game_id) {
     state["move_number"] = game->chess_engine->getTurn();
     state["is_active"] = game->is_active;
     state["is_ended"] = game->chess_engine->isEnded();
+    state["board_state"] = game->chess_engine->getFEN();
     
     // Move history
     state["move_history"] = json::array();

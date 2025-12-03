@@ -459,6 +459,65 @@ public:
         }
         cout << "================\n";
     }
+
+    string getFEN() {
+        string fen = "";
+        
+        // Board position
+        for (int row = 0; row < 8; row++) {
+            int emptyCount = 0;
+            for (int col = 0; col < 8; col++) {
+                if (board[row][col] == NONE) {
+                    emptyCount++;
+                } else {
+                    if (emptyCount > 0) {
+                        fen += to_string(emptyCount);
+                        emptyCount = 0;
+                    }
+                    char piece;
+                    switch (board[row][col]) {
+                        case KING:   piece = 'k'; break;
+                        case QUEEN:  piece = 'q'; break;
+                        case ROOK:   piece = 'r'; break;
+                        case BISHOP: piece = 'b'; break;
+                        case KNIGHT: piece = 'n'; break;
+                        case PAWN:   piece = 'p'; break;
+                        default:     piece = '?'; break;
+                    }
+                    if (is_white[row][col]) {
+                        piece = toupper(piece);
+                    }
+                    fen += piece;
+                }
+            }
+            if (emptyCount > 0) {
+                fen += to_string(emptyCount);
+            }
+            if (row < 7) {
+                fen += '/';
+            }
+        }
+        
+        // Active color
+        fen += (turn % 2 == 0) ? " w " : " b ";
+        
+        // Castling rights
+        string castling = "";
+        if (!white_king_moved) {
+            if (!white_rook_h_moved) castling += "K";
+            if (!white_rook_a_moved) castling += "Q";
+        }
+        if (!black_king_moved) {
+            if (!black_rook_h_moved) castling += "k";
+            if (!black_rook_a_moved) castling += "q";
+        }
+        fen += (castling.empty() ? "-" : castling);
+        
+        // En passant, halfmove, fullmove (simplified)
+        fen += " - 0 " + to_string((turn / 2) + 1);
+        
+        return fen;
+    }
     
     GameResult getResult() { return result; }
     bool isEnded() { return is_ended; }
