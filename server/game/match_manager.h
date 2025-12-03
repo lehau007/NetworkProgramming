@@ -97,6 +97,7 @@ public:
     bool make_move(int game_id, int player_id, const std::string& move, 
                    json& out_response, int& out_opponent_id);
     bool resign_game(int game_id, int player_id, int& out_winner_id, int& out_loser_id);
+    bool handle_player_disconnect(int user_id);
     bool offer_draw(int game_id, int player_id, int& out_opponent_id);
     bool respond_to_draw(int game_id, int player_id, bool accepted, 
                         std::string& out_result, int& out_opponent_id);

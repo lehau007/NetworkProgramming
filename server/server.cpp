@@ -31,41 +31,46 @@ void* handle_client_connection(void *arg) {
     string client_ip = args->client_ip;
     delete args;
 
-    cout << "[Server] New connection from " << client_ip << endl;
-
-    // Create WebSocket handler
-    WebSocketHandler ws_handler(client_socket);
+    cout << "[Server] New connection from " << client_ip << " .Client socket: " << client_socket << endl;
     
-    // Perform WebSocket handshake
-    if (!ws_handler.perform_handshake()) {
-        cerr << "[Server] WebSocket handshake failed for " << client_ip << endl;
-        close(client_socket);
-        return nullptr;
-    }
-
-    cout << "[Server] WebSocket connection established with " << client_ip << endl;
-    
-    // Create message handler for this client
     MessageHandler msg_handler(client_socket);
-    
-    // Main message loop
-    string message;
-    while (ws_handler.receive_message(message)) {
-        if (message.empty()) {
-            continue;
+
+    { // Scope for WebSocketHandler
+        WebSocketHandler ws_handler(client_socket);
+        
+        if (!ws_handler.perform_handshake()) {
+            cerr << "[Server] WebSocket handshake failed for " << client_ip << endl;
+            close(client_socket);
+            return nullptr;
         }
+
+        cout << "[Server] WebSocket connection established with " << client_ip << endl;
         
-        cout << "[Server] Received message: " << message.substr(0, 100) << "..." << endl;
-        
-        // Handle the message
-        msg_handler.handle_message(message);
-        
-        // Update session activity
-        SessionManager::get_instance()->update_activity_by_socket(client_socket);
+        string message;
+        while (ws_handler.receive_message(message)) {
+            if (message.empty()) {
+                continue;
+            }
+            
+            cout << "[Server] Received message: " << message.substr(0, 100) << "..." << endl;
+            
+            // Handle the message
+            msg_handler.handle_message(message);
+            
+            // Update session activity
+            SessionManager::get_instance()->update_activity_by_socket(client_socket);
+        }
     }
     
     cout << "[Server] Client " << client_ip << " disconnected" << endl;
+
     
+    // Handle disconnect - notify opponent if in a game
+    Session* current_session = SessionManager::get_instance()->get_session_by_socket(client_socket);
+    if (current_session != nullptr) {
+        MatchManager::get_instance()->handle_player_disconnect(current_session->user_id);
+    }
+
     // Cleanup session on disconnect
     SessionManager::get_instance()->remove_session_by_socket(client_socket);
     
