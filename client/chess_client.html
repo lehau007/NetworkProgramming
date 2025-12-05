@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,30 +15,37 @@
             background-color: #333;
             color: #fff;
         }
+
         .container {
             display: flex;
             gap: 20px;
             perspective: 1000px;
         }
+
         .panel {
             background-color: #444;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             transition: transform 0.5s, opacity 0.5s;
             width: 350px;
         }
+
         .hidden {
             display: none;
             opacity: 0;
             transform: rotateY(-30deg) scale(0.9);
         }
+
         h2 {
             text-align: center;
             color: #4CAF50;
             margin-bottom: 20px;
         }
-        input[type="text"], input[type="password"], input[type="email"] {
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
             width: calc(100% - 20px);
             padding: 10px;
             margin-bottom: 15px;
@@ -46,6 +54,7 @@
             background-color: #555;
             color: #fff;
         }
+
         button {
             width: 100%;
             padding: 12px;
@@ -58,10 +67,12 @@
             transition: background-color 0.3s, transform 0.2s;
             margin-top: 10px;
         }
+
         button:hover {
             background-color: #45a049;
             transform: translateY(-2px);
         }
+
         #chessboard {
             width: 480px;
             height: 480px;
@@ -70,6 +81,7 @@
             border: 4px solid #666;
             border-radius: 8px;
         }
+
         .square {
             width: 60px;
             height: 60px;
@@ -79,10 +91,41 @@
             font-size: 48px;
             transition: background-color 0.2s;
         }
-        .light { background-color: #f0d9b5; }
-        .dark { background-color: #b58863; }
-        .piece { cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .selected { background-color: yellow !important; }
+
+        .light {
+            background-color: #f0d9b5;
+        }
+
+        .dark {
+            background-color: #b58863;
+        }
+
+        .piece {
+            cursor: pointer;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .selected {
+            background-color: yellow !important;
+        }
+
+        .in-check {
+            background-color: #ff5252 !important;
+            box-shadow: 0 0 20px rgba(255, 82, 82, 0.8) inset;
+            animation: pulse-check 1s infinite;
+        }
+
+        @keyframes pulse-check {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(255, 82, 82, 0.8) inset;
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(255, 82, 82, 1) inset;
+            }
+        }
 
         #player-list div {
             padding: 8px;
@@ -91,12 +134,14 @@
             justify-content: space-between;
             align-items: center;
         }
+
         #player-list button {
             width: auto;
             padding: 5px 10px;
             font-size: 14px;
             margin-top: 0;
         }
+
         #messages {
             height: 250px;
             overflow-y: auto;
@@ -107,14 +152,85 @@
             border-radius: 5px;
             font-family: 'Courier New', monospace;
         }
-        .message { padding: 5px; border-radius: 3px; }
-        .system { color: #ffab40; }
-        .sent { color: #81d4fa; }
-        .received { color: #c5e1a5; }
 
-        #game-state p { margin: 5px 0; }
+        .message {
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .system {
+            color: #ffab40;
+        }
+
+        .sent {
+            color: #81d4fa;
+        }
+
+        .received {
+            color: #c5e1a5;
+        }
+
+        #game-state p {
+            margin: 5px 0;
+        }
+
+        /* User Profile Card */
+        .user-profile {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-profile h3 {
+            margin: 0 0 15px 0;
+            color: #fff;
+            font-size: 20px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-box.rating {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-box.rating .stat-value {
+            font-size: 32px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Login Section -->
@@ -139,6 +255,30 @@
         <!-- Lobby Section -->
         <div id="lobby-section" class="panel hidden">
             <h2>Lobby</h2>
+
+            <!-- User Profile Card -->
+            <div class="user-profile">
+                <h3>🏆 <span id="profile-username">Player</span></h3>
+                <div class="user-stats">
+                    <div class="stat-box rating">
+                        <div class="stat-label">Rating</div>
+                        <div class="stat-value" id="profile-rating">1200</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value" id="profile-wins">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value" id="profile-losses">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Draws</div>
+                        <div class="stat-value" id="profile-draws">0</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="player-list"></div>
             <button onclick="getAvailablePlayers()">Refresh Players</button>
             <button onclick="logout()">Logout</button>
@@ -165,6 +305,8 @@
         let session_id = null;
         let username = null;
         let currentGameId = null;
+        let userData = null; // Store user data from server
+        let myColor = null; // Store player's color ("white" or "black")
 
         // UI Elements
         const loginSection = document.getElementById('login-section');
@@ -172,6 +314,27 @@
         const lobbySection = document.getElementById('lobby-section');
         const gameSection = document.getElementById('game-section');
         const messagesDiv = document.getElementById('messages');
+
+        // Function to update user profile display
+        function updateUserProfile(data) {
+            if (!data) return;
+
+            userData = data;
+            document.getElementById('profile-username').textContent = data.username || 'Player';
+            document.getElementById('profile-rating').textContent = data.rating || '1200';
+            document.getElementById('profile-wins').textContent = data.wins || '0';
+            document.getElementById('profile-losses').textContent = data.losses || '0';
+            document.getElementById('profile-draws').textContent = data.draws || '0';
+        }
+
+        // Function to reload user profile from server
+        function reloadUserProfile() {
+            if (!session_id || !userData || !userData.user_id) return;
+
+            // Request fresh user data from server
+            // According to MESSAGE_TYPES.md, we can use VERIFY_SESSION to get updated user_data
+            send({ type: 'VERIFY_SESSION', session_id: session_id });
+        }
 
         // UI Navigation
         function showLogin() {
@@ -264,6 +427,10 @@
                     username = msg.user_data.username;
                     localStorage.setItem('session_id', session_id);
                     localStorage.setItem('username', username);
+
+                    // Update user profile with fresh data
+                    updateUserProfile(msg.user_data);
+
                     showLobby();
                     getAvailablePlayers();
                     break;
@@ -280,6 +447,10 @@
                         username = msg.user_data.username;
                         localStorage.setItem('session_id', session_id);
                         localStorage.setItem('username', username);
+
+                        // Update user profile with data from login
+                        updateUserProfile(msg.user_data);
+
                         showLobby();
                         getAvailablePlayers();
                     } else {
@@ -294,7 +465,7 @@
                         alert(`Registration failed: ${msg.message}`);
                     }
                     break;
-case 'DRAW_OFFER_RECEIVED':
+                case 'DRAW_OFFER_RECEIVED':
                     if (confirm('Your opponent has offered a draw. Do you accept?')) {
                         respondToDrawOffer(true);
                     } else {
@@ -302,16 +473,42 @@ case 'DRAW_OFFER_RECEIVED':
                     }
                     break;
                 case 'MOVE_ACCEPTED':
-                    // The server will send an OPPONENT_MOVE to the other player, 
-                    // and a GAME_STATE to the current player.
-                    // We can also update the board optimistically.
-                    send({ type: 'GET_GAME_STATE', session_id: session_id, game_id: currentGameId });
+                    // Update board state if provided
+                    if (msg.board_state) {
+                        renderPieces(msg.board_state);
+                    }
+                    // Update game state display
+                    if (msg.current_turn) {
+                        updateTurnDisplay(msg.current_turn);
+                    }
+                    // Check if opponent is in check (we just moved)
+                    if (msg.is_check && msg.current_turn) {
+                        // current_turn is the next player (opponent)
+                        // Only highlight if opponent is in check, not us
+                        highlightKingInCheck(msg.current_turn);
+                        addMessage('⚠️ CHECK! Opponent\'s king is under attack!', 'system');
+                    } else {
+                        clearCheckHighlight();
+                    }
                     break;
                 case 'MOVE_REJECTED':
-                    alert(`Move rejected: ${msg.reason}`);
+                    alert(`❌ Move rejected: ${msg.reason}`);
+                    // Clear selection on rejected move
+                    if (selectedSquare !== null) {
+                        const square = document.querySelector(`.square[data-index='${selectedSquare}']`);
+                        if (square) square.classList.remove('selected');
+                        selectedSquare = null;
+                    }
                     break;
                 case 'GAME_ENDED':
                     alert(`Game over: ${msg.reason}`);
+
+                    // Reload user profile to get updated stats (wins/losses/draws/rating)
+                    // After game ends, stats are updated on server
+                    setTimeout(() => {
+                        reloadUserProfile();
+                    }, 500);
+
                     showLobby();
                     break;
                 case 'PLAYER_LIST':
@@ -339,16 +536,44 @@ case 'DRAW_OFFER_RECEIVED':
                     break;
                 case 'MATCH_STARTED':
                     currentGameId = msg.game_id;
+                    myColor = msg.your_color; // Save player's color
+                    console.log(`Match started! I am playing as ${myColor}`);
                     showGame();
                     send({ type: 'GET_GAME_STATE', session_id: session_id, game_id: msg.game_id });
                     break;
                 case 'GAME_STATE':
                     currentGameId = msg.game_id;
                     updateGameState(msg);
+                    // Update turn display
+                    if (msg.current_turn) {
+                        updateTurnDisplay(msg.current_turn);
+                    }
+                    // Check for check status - only highlight if WE are in check
+                    if (msg.is_check && msg.current_turn && msg.current_turn === myColor) {
+                        highlightKingInCheck(myColor);
+                        addMessage('⚠️ You are in CHECK!', 'system');
+                    } else {
+                        clearCheckHighlight();
+                    }
                     showGame();
                     break;
                 case 'OPPONENT_MOVE':
                     updateGameState(msg);
+                    // Update turn display
+                    if (msg.current_turn) {
+                        updateTurnDisplay(msg.current_turn);
+                    }
+                    // Check if WE are in check (opponent just moved)
+                    if (msg.is_check && msg.current_turn) {
+                        // current_turn is the next player
+                        // If current_turn matches our color, WE are in check
+                        if (msg.current_turn === myColor) {
+                            highlightKingInCheck(myColor);
+                            addMessage('⚠️ You are in CHECK! You must defend your king!', 'system');
+                        }
+                    } else {
+                        clearCheckHighlight();
+                    }
                     break;
                 default:
                     break;
@@ -473,6 +698,7 @@ case 'DRAW_OFFER_RECEIVED':
             // boardState is a FEN string
             const squares = document.querySelectorAll('.square');
             squares.forEach(s => s.innerHTML = ''); // Clear board
+    
             const pieceMap = {
                 'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔',
                 'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
@@ -493,7 +719,7 @@ case 'DRAW_OFFER_RECEIVED':
                 }
             });
         }
-        
+
         let selectedSquare = null;
 
         function onSquareClick(index) {
@@ -521,27 +747,68 @@ case 'DRAW_OFFER_RECEIVED':
                 selectedSquare = null;
             }
         }
-        
+
         function toAlgebraic(index) {
             const row = 8 - Math.floor(index / 8);
             const col = String.fromCharCode('a'.charCodeAt(0) + (index % 8));
             return `${col}${row}`;
         }
-        
+
         function updateGameState(gameState) {
             const gameStateDiv = document.getElementById('game-state');
             gameStateDiv.innerHTML = `
-                <p><strong>Turn:</strong> ${gameState.current_turn}</p>
+                <p id="turn-display"><strong>Turn:</strong> <span id="turn-text">Loading...</span></p>
                 <p><strong>White:</strong> ${gameState.white_player}</p>
                 <p><strong>Black:</strong> ${gameState.black_player}</p>
             `;
             renderPieces(gameState.board_state);
+            // Update turn display if available
+            if (gameState.current_turn) {
+                updateTurnDisplay(gameState.current_turn);
+            }
         }
-        
+
+        function updateTurnDisplay(currentTurn) {
+            const turnTextElement = document.getElementById('turn-text');
+            if (!turnTextElement) return;
+            
+            if (currentTurn === myColor) {
+                turnTextElement.innerHTML = `<span style="color: #4CAF50; font-weight: bold;">YOUR TURN (${myColor})</span>`;
+            } else {
+                turnTextElement.innerHTML = `<span style="color: #ff9800;">Opponent's turn (${currentTurn})</span>`;
+            }
+        }
+
+        function highlightKingInCheck(colorInCheck) {
+            clearCheckHighlight();
+
+            // Find the king of the specified color
+            // White king (solid) = '♔', Black king (hollow) = '♚'
+            const squares = document.querySelectorAll('.square');
+            const whiteKingSymbol = '♚';  // Solid white king
+            const blackKingSymbol = '♔';  // Hollow black king
+            const kingSymbol = (colorInCheck === 'white') ? whiteKingSymbol : blackKingSymbol;
+
+            squares.forEach(square => {
+                const piece = square.querySelector('.piece');
+                if (piece && piece.textContent === kingSymbol) {
+                    square.classList.add('in-check');
+                    console.log(`Highlighting ${colorInCheck} king in check at square`, square.dataset.index);
+                }
+            });
+        }
+
+        function clearCheckHighlight() {
+            document.querySelectorAll('.in-check').forEach(square => {
+                square.classList.remove('in-check');
+            });
+        }
+
         createChessboard();
 
         // Start the connection when the page loads
         window.onload = connect;
     </script>
 </body>
+
 </html>

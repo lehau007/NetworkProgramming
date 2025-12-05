@@ -394,13 +394,23 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
     bool is_ended = game->chess_engine->isEnded();
     GameResult result = game->chess_engine->getResult();
     
+    // Check if opponent's king is in check after the move
+    // After move, turn has been incremented
+    // turn % 2 == 0 means it's WHITE's turn next
+    // turn % 2 == 1 means it's BLACK's turn next
+    // So we need to check the king of the player whose turn it is NOW
+    bool next_player_is_white = (turn % 2 == 0);
+    bool opponent_king_in_check = game->chess_engine->isKingInCheck(next_player_is_white);
+    
     // Prepare response
     out_response["type"] = "MOVE_ACCEPTED";
     out_response["game_id"] = game_id;
     out_response["move"] = move;
     out_response["move_number"] = turn;
-    out_response["is_check"] = false;  // TODO: Implement check detection
+    out_response["is_check"] = opponent_king_in_check;
     out_response["is_checkmate"] = is_ended;
+    out_response["board_state"] = game->chess_engine->getFEN();
+    out_response["current_turn"] = next_player_is_white ? "white" : "black";
     
     // Prepare opponent move notification
     out_opponent_id = player_is_white ? game->black_player_id : game->white_player_id;
@@ -410,7 +420,7 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
     opponent_move["game_id"] = game_id;
     opponent_move["move"] = move;
     opponent_move["move_number"] = turn;
-    opponent_move["is_check"] = false;
+    opponent_move["is_check"] = opponent_king_in_check;
     opponent_move["captured_piece"] = nullptr;
     opponent_move["timestamp"] = std::time(nullptr);
     opponent_move["board_state"] = game->chess_engine->getFEN();  

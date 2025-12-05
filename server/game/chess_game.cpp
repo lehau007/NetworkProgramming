@@ -305,7 +305,20 @@ public:
         }
         
         // Validate piece-specific move
-        return isValidPieceMove(piece, fromRow, fromCol, toRow, toCol, currentPlayerIsWhite);
+        if (!isValidPieceMove(piece, fromRow, fromCol, toRow, toCol, currentPlayerIsWhite)) {
+            return false;
+        }
+        
+        // CRITICAL: Check if this move would leave own king in check
+        // This prevents:
+        // 1. Moving into check
+        // 2. Moving away and exposing king to check
+        // 3. Not resolving existing check
+        if (wouldBeInCheckAfterMove(fromRow, fromCol, toRow, toCol)) {
+            return false;
+        }
+        
+        return true;
     }
 
     bool move(string move) {
@@ -357,13 +370,6 @@ public:
         // Generate log entry before moving (for regular moves)
         string logEntry = generateLogEntry(fromRow, fromCol, toRow, toCol, isCapture, false);
         
-        // Check if capturing a king (game ending condition)
-        if (board[toRow][toCol] == KING) {
-            is_ended = true;
-            result = (turn % 2 == 0) ? WHITE_WIN : BLACK_WIN;
-            logEntry += " - CHECKMATE!";
-        }
-        
         // Update castling rights before moving
         if (piece == KING) {
             if (pieceIsWhite) white_king_moved = true;
@@ -393,33 +399,31 @@ public:
     bool checkGameEnd() {
         if (is_ended) return true;
         
+        // Determine whose turn it is NOW (after the move was made)
+        bool currentPlayerIsWhite = (turn % 2 == 0);
+        
+        // Check for checkmate
+        if (isCheckmate(currentPlayerIsWhite)) {
+            is_ended = true;
+            // The player who just moved (opposite color) wins
+            result = currentPlayerIsWhite ? BLACK_WIN : WHITE_WIN;
+            cout << "[ChessGame] CHECKMATE! " << (currentPlayerIsWhite ? "Black" : "White") << " wins!" << endl;
+            return true;
+        }
+        
+        // Check for stalemate
+        if (isStalemate(currentPlayerIsWhite)) {
+            is_ended = true;
+            result = DRAW;
+            cout << "[ChessGame] STALEMATE! Game is a draw." << endl;
+            return true;
+        }
+        
         // Check for draw by move limit (simplified: 100 moves without capture)
         if (turn >= 200) {
             is_ended = true;
             result = DRAW;
-            return true;
-        }
-        
-        // Count kings
-        int whiteKings = 0, blackKings = 0;
-        for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 8; j++) {
-                if (board[i][j] == KING) {
-                    if (is_white[i][j]) whiteKings++;
-                    else blackKings++;
-                }
-            }
-        }
-        
-        // Check if a king has been captured
-        if (whiteKings == 0) {
-            is_ended = true;
-            result = BLACK_WIN;
-            return true;
-        }
-        if (blackKings == 0) {
-            is_ended = true;
-            result = WHITE_WIN;
+            cout << "[ChessGame] Draw by move limit (100 moves)." << endl;
             return true;
         }
         
@@ -517,6 +521,120 @@ public:
         fen += " - 0 " + to_string((turn / 2) + 1);
         
         return fen;
+    }
+    
+    // Find king position for a specific color
+    bool findKingPosition(bool isWhite, int& kingRow, int& kingCol) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board[i][j] == KING && is_white[i][j] == isWhite) {
+                    kingRow = i;
+                    kingCol = j;
+                    return true;
+                }
+            }
+        }
+        return false; // King not found (shouldn't happen in valid game)
+    }
+    
+    // Check if a specific color's king is in check
+    bool isKingInCheck(bool whiteKing) {
+        int kingRow, kingCol;
+        if (!findKingPosition(whiteKing, kingRow, kingCol)) {
+            return false; // King not found
+        }
+        
+        // Check if king's position is under attack by opponent
+        return isSquareUnderAttack(kingRow, kingCol, !whiteKing);
+    }
+    
+    // Check if a move would leave own king in check (illegal move)
+    bool wouldBeInCheckAfterMove(int fromRow, int fromCol, int toRow, int toCol) {
+        // Save current state
+        PieceType capturedPiece = board[toRow][toCol];
+        bool capturedIsWhite = is_white[toRow][toCol];
+        PieceType movingPiece = board[fromRow][fromCol];
+        bool movingIsWhite = is_white[fromRow][fromCol];
+        
+        // Simulate move
+        board[toRow][toCol] = movingPiece;
+        is_white[toRow][toCol] = movingIsWhite;
+        board[fromRow][fromCol] = NONE;
+        
+        // Check if own king is in check after this move
+        bool inCheck = isKingInCheck(movingIsWhite);
+        
+        // Restore board
+        board[fromRow][fromCol] = movingPiece;
+        is_white[fromRow][fromCol] = movingIsWhite;
+        board[toRow][toCol] = capturedPiece;
+        if (capturedPiece != NONE) {
+            is_white[toRow][toCol] = capturedIsWhite;
+        }
+        
+        return inCheck;
+    }
+    
+    // Check if a player has any legal moves
+    bool hasLegalMoves(bool isWhite) {
+        // Try all possible moves for all pieces of this color
+        for (int fromRow = 0; fromRow < 8; fromRow++) {
+            for (int fromCol = 0; fromCol < 8; fromCol++) {
+                // Skip if no piece or wrong color
+                if (board[fromRow][fromCol] == NONE) continue;
+                if (is_white[fromRow][fromCol] != isWhite) continue;
+                
+                PieceType piece = board[fromRow][fromCol];
+                
+                // Try all possible destination squares
+                for (int toRow = 0; toRow < 8; toRow++) {
+                    for (int toCol = 0; toCol < 8; toCol++) {
+                        // Skip same square
+                        if (fromRow == toRow && fromCol == toCol) continue;
+                        
+                        // Skip if trying to capture own piece
+                        if (board[toRow][toCol] != NONE && is_white[toRow][toCol] == isWhite) {
+                            continue;
+                        }
+                        
+                        // Check if this is a valid piece move
+                        bool validPieceMove = false;
+                        
+                        // Special handling for castling
+                        if (piece == KING && abs(toCol - fromCol) == 2) {
+                            validPieceMove = canCastle(fromRow, fromCol, toRow, toCol, isWhite);
+                        } else {
+                            validPieceMove = isValidPieceMove(piece, fromRow, fromCol, toRow, toCol, isWhite);
+                        }
+                        
+                        if (!validPieceMove) continue;
+                        
+                        // Check if this move would leave king in check
+                        if (wouldBeInCheckAfterMove(fromRow, fromCol, toRow, toCol)) {
+                            continue;
+                        }
+                        
+                        // Found a legal move!
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // No legal moves found
+        return false;
+    }
+    
+    // Check if current position is checkmate
+    bool isCheckmate(bool isWhite) {
+        // Checkmate = in check AND no legal moves
+        return isKingInCheck(isWhite) && !hasLegalMoves(isWhite);
+    }
+    
+    // Check if current position is stalemate
+    bool isStalemate(bool isWhite) {
+        // Stalemate = NOT in check AND no legal moves
+        return !isKingInCheck(isWhite) && !hasLegalMoves(isWhite);
     }
     
     GameResult getResult() { return result; }
