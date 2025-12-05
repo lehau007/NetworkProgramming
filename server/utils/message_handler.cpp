@@ -157,7 +157,7 @@ void MessageHandler::handle_verify_session(const json& request) {
             response["user_data"]["rating"] = user.rating;
         }
         
-        response["active_game_id"] = nullptr;  // TODO: Get from game manager
+        response["active_game_id"] = nullptr;  // TODO: Get from game manager (this todo is not necessary because session can not have dulicated connection)
         response["last_activity"] = session->last_activity;
         response["message"] = "Session restored successfully";
         
