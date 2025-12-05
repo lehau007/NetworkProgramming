@@ -72,7 +72,7 @@ void* handle_client_connection(void *arg) {
     }
 
     // Cleanup session on disconnect
-    SessionManager::get_instance()->remove_session_by_socket(client_socket);
+    SessionManager::get_instance()->remove_session_by_socket_in_cache(client_socket);
     
     close(client_socket);
     return nullptr;

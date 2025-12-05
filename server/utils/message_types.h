@@ -56,6 +56,7 @@ namespace MessageTypes {
     const std::string ERROR = "ERROR";  // UNSOLICITED
     const std::string SESSION_EXPIRED = "SESSION_EXPIRED";  // UNSOLICITED
     const std::string SERVER_SHUTDOWN = "SERVER_SHUTDOWN";  // UNSOLICITED
+    const std::string DUPLICATE_SESSION = "DUPLICATE_SESSION";  // UNSOLICITED - Multiple connections with same session
     const std::string RECONNECT_SUCCESS = "RECONNECT_SUCCESS";
     const std::string PING = "PING";
     const std::string PONG = "PONG";

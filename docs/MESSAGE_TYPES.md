@@ -618,6 +618,27 @@ Messages are categorized by direction and purpose:
 }
 ```
 
+#### DUPLICATE_SESSION
+**Purpose**: Notify client that another connection is already using this session (UNSOLICITED)
+
+**When sent**: When a client attempts to verify a session that is already associated with an active connection (different socket).
+
+```json
+{
+    "type": "DUPLICATE_SESSION",
+    "session_id": "abc123def456...",
+    "reason": "already_connected",
+    "message": "Multiple connections with the same session are not allowed. Please close the existing connection first.",
+    "timestamp": 1700000004
+}
+```
+
+**Note**: The server enforces a single connection per session. If a user opens a second browser tab or window and tries to connect with the same session_id, they will receive this message. The existing connection remains active and unaffected.
+
+**Client Action Required**: Close this connection and either:
+1. Close the other browser tab/window with the active connection, OR
+2. Log out from the active connection before reconnecting
+
 #### RECONNECT_SUCCESS
 **Purpose**: Confirm successful reconnection with existing session
 
@@ -815,6 +836,7 @@ enum class MessageType {
     ERROR,                 // UNSOLICITED
     SESSION_EXPIRED,       // UNSOLICITED
     SERVER_SHUTDOWN,       // UNSOLICITED
+    DUPLICATE_SESSION,     // UNSOLICITED - Multiple connections with same session
     RECONNECT_SUCCESS,
     PING,
     PONG,
@@ -881,6 +903,7 @@ class MessageType:
     ERROR = "ERROR"  # UNSOLICITED
     SESSION_EXPIRED = "SESSION_EXPIRED"  # UNSOLICITED
     SERVER_SHUTDOWN = "SERVER_SHUTDOWN"  # UNSOLICITED
+    DUPLICATE_SESSION = "DUPLICATE_SESSION"  # UNSOLICITED - Multiple connections with same session
     RECONNECT_SUCCESS = "RECONNECT_SUCCESS"
     PING = "PING"
     PONG = "PONG"
@@ -908,6 +931,7 @@ Messages that the server sends **WITHOUT** a client request:
 | `REMATCH_REQUEST_RECEIVED` | Opponent requests rematch | Other player |
 | `ERROR` | Error condition occurs | Affected client(s) |
 | `SESSION_EXPIRED` | Session times out | Session owner |
+| `DUPLICATE_SESSION` | Another connection already using session | New connection attempt |
 | `SERVER_SHUTDOWN` | Server shutting down | All connected clients |
 | `CHAT_MESSAGE_RECEIVED` | Opponent sends chat | Other player in game |
 

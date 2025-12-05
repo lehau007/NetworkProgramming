@@ -105,6 +105,26 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
+        .piece.white-piece {
+            color: #ffffff;
+            text-shadow: 
+                1px 1px 0 #000,
+                -1px 1px 0 #000,
+                1px -1px 0 #000,
+                -1px -1px 0 #000,
+                0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .piece.black-piece {
+            color: #1a1a1a;
+            text-shadow: 
+                1px 1px 0 #666,
+                -1px 1px 0 #666,
+                1px -1px 0 #666,
+                -1px -1px 0 #666,
+                0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
         .selected {
             background-color: yellow !important;
         }
@@ -228,6 +248,166 @@
         .stat-box.rating .stat-value {
             font-size: 32px;
         }
+
+        /* Game Log Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: #444;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #666;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .modal-close {
+            background: #ff5252;
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .game-result {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .game-result.win {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .game-result.loss {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        .game-result.draw {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+
+        .game-result h3 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+
+        .game-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .game-info-item {
+            background-color: #555;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .game-info-label {
+            color: #aaa;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .game-info-value {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .move-history {
+            background-color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .move-history h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+
+        .moves-grid {
+            display: grid;
+            grid-template-columns: 30px 1fr 1fr;
+            gap: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .move-number {
+            color: #888;
+            text-align: right;
+        }
+
+        .move-white, .move-black {
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+
+        .move-white {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .move-black {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Duplicate Session Alert */
+        .duplicate-session-alert {
+            background: linear-gradient(135deg, #ff5252, #d32f2f);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .duplicate-session-alert h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .duplicate-session-alert p {
+            margin: 0;
+            opacity: 0.9;
+        }
     </style>
 </head>
 
@@ -295,6 +475,61 @@
                 <div id="messages"></div>
                 <button onclick="resign()">Resign</button>
                 <button onclick="offerDraw()">Offer Draw</button>
+            </div>
+        </div>
+
+        <!-- Game Log Modal -->
+        <div id="game-log-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🏁 Game Over</h2>
+                    <button class="modal-close" onclick="closeGameLogModal()">×</button>
+                </div>
+                <div id="game-result-section" class="game-result">
+                    <h3 id="result-title">Result</h3>
+                    <p id="result-reason">Reason</p>
+                </div>
+                <div class="game-info">
+                    <div class="game-info-item">
+                        <div class="game-info-label">White</div>
+                        <div class="game-info-value" id="log-white-player">-</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Black</div>
+                        <div class="game-info-value" id="log-black-player">-</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Moves</div>
+                        <div class="game-info-value" id="log-move-count">0</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Duration</div>
+                        <div class="game-info-value" id="log-duration">0:00</div>
+                    </div>
+                </div>
+                <div class="move-history">
+                    <h4>📜 Move History</h4>
+                    <div id="moves-grid" class="moves-grid">
+                        <!-- Moves will be inserted here -->
+                    </div>
+                </div>
+                <button onclick="closeGameLogModal()" style="margin-top: 20px;">Return to Lobby</button>
+            </div>
+        </div>
+
+        <!-- Duplicate Session Modal -->
+        <div id="duplicate-session-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="duplicate-session-alert">
+                    <h3>⚠️ Session Already Active</h3>
+                    <p id="duplicate-session-message">Another connection is using this session.</p>
+                </div>
+                <p style="text-align: center; color: #aaa;">
+                    You cannot have multiple browser tabs/windows using the same session.
+                    Please close the other connection or log in with different credentials.
+                </p>
+                <button onclick="closeDuplicateSessionModal()">Close</button>
+                <button onclick="forceNewLogin()" style="background-color: #ff9800;">Login with New Session</button>
             </div>
         </div>
     </div>
@@ -441,6 +676,11 @@
                     username = null;
                     showLogin();
                     break;
+                case 'DUPLICATE_SESSION':
+                    // Handle duplicate session - another connection is using this session
+                    addMessage(`⚠️ Duplicate session: ${msg.message}`, 'system');
+                    showDuplicateSessionModal(msg.message);
+                    break;
                 case 'LOGIN_RESPONSE':
                     if (msg.status === 'success') {
                         session_id = msg.session_id;
@@ -501,15 +741,13 @@
                     }
                     break;
                 case 'GAME_ENDED':
-                    alert(`Game over: ${msg.reason}`);
+                    // Show game log modal with full game details
+                    showGameLogModal(msg);
 
                     // Reload user profile to get updated stats (wins/losses/draws/rating)
-                    // After game ends, stats are updated on server
                     setTimeout(() => {
                         reloadUserProfile();
                     }, 500);
-
-                    showLobby();
                     break;
                 case 'PLAYER_LIST':
                     const playerListDiv = document.getElementById('player-list');
@@ -538,6 +776,8 @@
                     currentGameId = msg.game_id;
                     myColor = msg.your_color; // Save player's color
                     console.log(`Match started! I am playing as ${myColor}`);
+                    // Recreate chessboard with correct orientation for this player
+                    createChessboard();
                     showGame();
                     send({ type: 'GET_GAME_STATE', session_id: session_id, game_id: msg.game_id });
                     break;
@@ -672,24 +912,160 @@
             showLogin();
         }
 
+        // ============================================
+        // Game Log Modal Functions
+        // ============================================
+        function showGameLogModal(gameData) {
+            const modal = document.getElementById('game-log-modal');
+            const resultSection = document.getElementById('game-result-section');
+            const resultTitle = document.getElementById('result-title');
+            const resultReason = document.getElementById('result-reason');
+            
+            // Determine if player won, lost, or drew
+            let resultClass = 'draw';
+            let resultText = 'Draw!';
+            
+            if (gameData.result === 'WHITE_WIN' || gameData.result === 'BLACK_WIN') {
+                if (gameData.winner === username) {
+                    resultClass = 'win';
+                    resultText = '🎉 Victory!';
+                } else {
+                    resultClass = 'loss';
+                    resultText = '😔 Defeat';
+                }
+            } else {
+                resultText = '🤝 Draw';
+            }
+            
+            resultSection.className = 'game-result ' + resultClass;
+            resultTitle.textContent = resultText;
+            resultReason.textContent = formatReason(gameData.reason);
+            
+            // Fill game info
+            document.getElementById('log-white-player').textContent = gameData.white_player || '-';
+            document.getElementById('log-black-player').textContent = gameData.black_player || '-';
+            document.getElementById('log-move-count').textContent = gameData.move_count || 0;
+            document.getElementById('log-duration').textContent = formatDuration(gameData.duration_seconds || 0);
+            
+            // Fill move history
+            const movesGrid = document.getElementById('moves-grid');
+            movesGrid.innerHTML = '';
+            
+            if (gameData.move_history && gameData.move_history.length > 0) {
+                for (let i = 0; i < gameData.move_history.length; i += 2) {
+                    const moveNumber = Math.floor(i / 2) + 1;
+                    const whiteMove = gameData.move_history[i] || '';
+                    const blackMove = gameData.move_history[i + 1] || '';
+                    
+                    const numDiv = document.createElement('div');
+                    numDiv.className = 'move-number';
+                    numDiv.textContent = moveNumber + '.';
+                    
+                    const whiteDiv = document.createElement('div');
+                    whiteDiv.className = 'move-white';
+                    whiteDiv.textContent = whiteMove;
+                    
+                    const blackDiv = document.createElement('div');
+                    blackDiv.className = 'move-black';
+                    blackDiv.textContent = blackMove;
+                    
+                    movesGrid.appendChild(numDiv);
+                    movesGrid.appendChild(whiteDiv);
+                    movesGrid.appendChild(blackDiv);
+                }
+            } else {
+                movesGrid.innerHTML = '<div style="grid-column: 1/-1; color: #888;">No moves recorded</div>';
+            }
+            
+            modal.classList.add('show');
+        }
+        
+        function closeGameLogModal() {
+            const modal = document.getElementById('game-log-modal');
+            modal.classList.remove('show');
+            showLobby();
+            getAvailablePlayers();
+        }
+        
+        function formatReason(reason) {
+            const reasons = {
+                'checkmate': 'Checkmate',
+                'resignation': 'Resignation',
+                'timeout': 'Time Out',
+                'draw_agreement': 'Draw by Agreement',
+                'stalemate': 'Stalemate',
+                'opponent_disconnected': 'Opponent Disconnected',
+                'insufficient_material': 'Insufficient Material'
+            };
+            return reasons[reason] || reason || 'Game Over';
+        }
+        
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ============================================
+        // Duplicate Session Modal Functions
+        // ============================================
+        function showDuplicateSessionModal(message) {
+            const modal = document.getElementById('duplicate-session-modal');
+            document.getElementById('duplicate-session-message').textContent = message || 'Another connection is using this session.';
+            modal.classList.add('show');
+        }
+        
+        function closeDuplicateSessionModal() {
+            const modal = document.getElementById('duplicate-session-modal');
+            modal.classList.remove('show');
+            // Clear stored session since it's being used elsewhere
+            localStorage.removeItem('session_id');
+            localStorage.removeItem('username');
+            session_id = null;
+            username = null;
+            if (ws) {
+                ws.close();
+            }
+            showLogin();
+        }
+        
+        function forceNewLogin() {
+            closeDuplicateSessionModal();
+            // Reconnect for a fresh login
+            setTimeout(() => {
+                connect();
+            }, 500);
+        }
+
 
 
 
         function createChessboard() {
             const chessboard = document.getElementById('chessboard');
             chessboard.innerHTML = '';
-            for (let i = 0; i < 64; i++) {
+            
+            // Flip board if playing as black (black player sees board from their perspective)
+            const isFlipped = (myColor === 'black');
+            
+            for (let displayPos = 0; displayPos < 64; displayPos++) {
                 const square = document.createElement('div');
-                const row = Math.floor(i / 8);
-                const col = i % 8;
+                // Calculate the logical FEN index for this display position
+                // When flipped, display position 0 (top-left) should be logical index 63 (h1)
+                const logicalIndex = isFlipped ? (63 - displayPos) : displayPos;
+                
+                // Use logical index for coloring (so board colors stay consistent)
+                const row = Math.floor(logicalIndex / 8);
+                const col = logicalIndex % 8;
+                
                 square.classList.add('square');
                 if ((row + col) % 2 === 0) {
                     square.classList.add('light');
                 } else {
                     square.classList.add('dark');
                 }
-                square.dataset.index = i;
-                square.onclick = () => onSquareClick(i);
+                // Store the LOGICAL index - this is what we use for moves
+                square.dataset.index = logicalIndex;
+                square.onclick = () => onSquareClick(logicalIndex);
                 chessboard.appendChild(square);
             }
         }
@@ -699,22 +1075,38 @@
             const squares = document.querySelectorAll('.square');
             squares.forEach(s => s.innerHTML = ''); // Clear board
     
+            // Using filled pieces for both, but with different colors via CSS
             const pieceMap = {
-                'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔',
-                'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
+                'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',  // Black pieces (lowercase in FEN)
+                'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'   // White pieces (uppercase in FEN)
             };
+            
             const rows = boardState.split(' ')[0].split('/');
-            let i = 0;
+            let logicalIndex = 0;
+            
             rows.forEach(row => {
                 for (const char of row) {
                     if (isNaN(char)) {
-                        const piece = document.createElement('span');
-                        piece.classList.add('piece');
-                        piece.textContent = pieceMap[char];
-                        squares[i].appendChild(piece);
-                        i++;
+                        // Find square by its logical index (data-index attribute)
+                        const square = document.querySelector(`.square[data-index='${logicalIndex}']`);
+                        
+                        if (square) {
+                            const piece = document.createElement('span');
+                            piece.classList.add('piece');
+                            
+                            // Add color class based on piece case (uppercase = white, lowercase = black)
+                            if (char === char.toUpperCase()) {
+                                piece.classList.add('white-piece');
+                            } else {
+                                piece.classList.add('black-piece');
+                            }
+                            
+                            piece.textContent = pieceMap[char];
+                            square.appendChild(piece);
+                        }
+                        logicalIndex++;
                     } else {
-                        i += parseInt(char);
+                        logicalIndex += parseInt(char);
                     }
                 }
             });
@@ -749,6 +1141,8 @@
         }
 
         function toAlgebraic(index) {
+            // Convert logical board index to algebraic notation
+            // Index 0 = a8, Index 7 = h8, Index 56 = a1, Index 63 = h1
             const row = 8 - Math.floor(index / 8);
             const col = String.fromCharCode('a'.charCodeAt(0) + (index % 8));
             return `${col}${row}`;
@@ -783,15 +1177,14 @@
             clearCheckHighlight();
 
             // Find the king of the specified color
-            // White king (solid) = '♔', Black king (hollow) = '♚'
-            const squares = document.querySelectorAll('.square');
-            const whiteKingSymbol = '♚';  // Solid white king
-            const blackKingSymbol = '♔';  // Hollow black king
-            const kingSymbol = (colorInCheck === 'white') ? whiteKingSymbol : blackKingSymbol;
+            // Now both kings use ♚ symbol but are distinguished by CSS class
+            const kingSymbol = '♚';
+            const kingClass = (colorInCheck === 'white') ? 'white-piece' : 'black-piece';
 
+            const squares = document.querySelectorAll('.square');
             squares.forEach(square => {
                 const piece = square.querySelector('.piece');
-                if (piece && piece.textContent === kingSymbol) {
+                if (piece && piece.textContent === kingSymbol && piece.classList.contains(kingClass)) {
                     square.classList.add('in-check');
                     console.log(`Highlighting ${colorInCheck} king in check at square`, square.dataset.index);
                 }

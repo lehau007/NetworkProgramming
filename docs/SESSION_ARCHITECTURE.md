@@ -229,7 +229,19 @@ if (valid) {
     Session* session = mgr->get_session(session_id);
     
     // Update socket mapping for new connection
-    mgr->update_socket_mapping(session_id, new_client_socket);
+    bool mapping_success = mgr->update_socket_mapping(session_id, new_client_socket);
+    
+    if (!mapping_success) {
+        // Session already has an active socket (another connection)
+        // Send DUPLICATE_SESSION error
+        send_response(client_socket, {
+            {"type", "DUPLICATE_SESSION"},
+            {"session_id", session_id},
+            {"reason", "already_connected"},
+            {"message", "Multiple connections with the same session are not allowed."}
+        });
+        return;
+    }
     
     // Session restored
 } else {
@@ -244,7 +256,7 @@ if (valid) {
 
 **Memory State:**
 - Session loaded to cache (if not already cached)
-- Socket mapping updated to new socket
+- Socket mapping updated to new socket (only if no existing active socket)
 
 ### 3. Client Makes Requests
 
@@ -435,8 +447,20 @@ void* handle_client(void* arg) {
         string session_id = msg["session_id"].asString();
         
         if (session_mgr->verify_session(session_id)) {
-            // Session valid - update socket mapping
-            session_mgr->update_socket_mapping(session_id, client_socket);
+            // Session valid - try to update socket mapping
+            bool mapping_success = session_mgr->update_socket_mapping(session_id, client_socket);
+            
+            if (!mapping_success) {
+                // Another connection is already using this session
+                send_json_response(client_socket, {
+                    {"type", "DUPLICATE_SESSION"},
+                    {"session_id", session_id},
+                    {"reason", "already_connected"},
+                    {"message", "Multiple connections with the same session are not allowed."}
+                });
+                close(client_socket);
+                return NULL;
+            }
             
             send_json_response(client_socket, {
                 {"type", "SESSION_VALID"},
@@ -508,9 +532,11 @@ static const int SESSION_TIMEOUT = 3600;  // 1 hour
 
 1. **Session expiration** - 30 minute timeout
 2. **Single session enforcement** - One session per user
-3. **IP tracking** - Stored for audit
-4. **Secure session ID** - 32-char random hex
-5. **Database CASCADE** - Sessions deleted when user deleted
+3. **Single connection per session** - Prevents multiple simultaneous connections with same session_id
+4. **IP tracking** - Stored for audit
+5. **Secure session ID** - 32-char random hex
+6. **Database CASCADE** - Sessions deleted when user deleted
+7. **DUPLICATE_SESSION response** - Informs users when another connection is already using their session
 
 ### 🔒 Production Recommendations
 

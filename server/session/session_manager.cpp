@@ -214,10 +214,7 @@ bool SessionManager::update_activity_by_socket(int client_socket) {
     return update_activity(session_id);
 }
 
-void SessionManager::remove_session(const std::string& session_id) {
-    // Remove from database
-    SessionRepository::delete_session(session_id);
-    
+void SessionManager::remove_session_in_cache(const std::string& session_id) {
     // Remove from cache
     pthread_mutex_lock(&mutex);
     
@@ -226,7 +223,7 @@ void SessionManager::remove_session(const std::string& session_id) {
         Session& session = it->second;
         
         std::cout << "[SessionManager] Removing session " << session_id 
-                  << " for user " << session.username << " (DB + cache)" << std::endl;
+                  << " for user " << session.username << " (cache)" << std::endl;
         
         // Remove from all maps
         sessions_by_socket.erase(session.client_socket);
@@ -237,22 +234,25 @@ void SessionManager::remove_session(const std::string& session_id) {
     pthread_mutex_unlock(&mutex);
 }
 
-void SessionManager::remove_session_by_socket(int client_socket) {
+void SessionManager::remove_session_in_database(const std::string& session_id) {
+    SessionRepository::delete_session(session_id);
+}
+
+void SessionManager::remove_session_by_socket_in_cache(int client_socket) {
     pthread_mutex_lock(&mutex);
     
     auto it = sessions_by_socket.find(client_socket);
     if (it != sessions_by_socket.end()) {
         std::string session_id = it->second;
         pthread_mutex_unlock(&mutex);
-        remove_session(session_id);
+        remove_session_in_cache(session_id);
     } else {
         pthread_mutex_unlock(&mutex);
     }
 }
 
-void SessionManager::remove_session_by_user_id(int user_id) {
-    // Remove from database
-    SessionRepository::delete_session_by_user_id(user_id);
+void SessionManager::remove_session_by_user_id_in_cache(int user_id) {
+    
     
     // Remove from cache
     pthread_mutex_lock(&mutex);
@@ -261,9 +261,23 @@ void SessionManager::remove_session_by_user_id(int user_id) {
     if (it != sessions_by_user_id.end()) {
         std::string session_id = it->second;
         pthread_mutex_unlock(&mutex);
-        remove_session(session_id);
+        remove_session_in_cache(session_id);
     } else {
         pthread_mutex_unlock(&mutex);
+    }
+}
+
+void SessionManager::remove_session_by_user_id_in_database(int user_id) {
+    Session* session = get_session_by_user_id(user_id);
+    if (session) {
+        remove_session_in_database(session->session_id);
+    }
+}
+
+void SessionManager::remove_session_by_socket_in_database(int client_socket) {
+    Session* session = get_session_by_socket(client_socket);
+    if (session) {
+        remove_session_in_database(session->session_id);
     }
 }
 
@@ -348,7 +362,15 @@ std::string SessionManager::get_session_id_by_user(int user_id) {
     return SessionRepository::get_session_id_by_user(user_id);
 }
 
-void SessionManager::update_socket_mapping(const std::string& session_id, int client_socket) {
+bool SessionManager::update_socket_mapping(const std::string& session_id, int client_socket) {
+    // Check if session exists in cache => mean that one session map to one socket
+    for (const auto& pair : sessions_by_socket) {
+        if (pair.second == session_id && pair.first != client_socket) {
+            // Session is already associated with a different socket
+            return false;
+        }
+    }
+    
     pthread_mutex_lock(&mutex);
     
     sessions_by_socket[client_socket] = session_id;
@@ -360,12 +382,20 @@ void SessionManager::update_socket_mapping(const std::string& session_id, int cl
     }
     
     pthread_mutex_unlock(&mutex);
+
+    return true;
 }
 
 void SessionManager::remove_socket_mapping(int client_socket) {
     pthread_mutex_lock(&mutex);
     sessions_by_socket.erase(client_socket);
     pthread_mutex_unlock(&mutex);
+}
+
+bool SessionManager::is_user_connected(int user_id) {
+    bool connected = sessions_by_user_id.find(user_id) != sessions_by_user_id.end();
+    pthread_mutex_unlock(&mutex);
+    return connected;
 }
 
 void SessionManager::load_session_to_cache(const std::string& session_id) {

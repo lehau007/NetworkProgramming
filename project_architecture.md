@@ -200,7 +200,15 @@ struct Session {
 
 map<int, Session*> sessions_by_socket;
 map<int, Session*> sessions_by_user_id;
+```
 
+**Session Enforcement Policy:**
+- **Single connection per session**: The server enforces that only one connection can use a given session at a time
+- When a client attempts to verify a session already bound to an active socket, the server responds with `DUPLICATE_SESSION`
+- This prevents session hijacking and ensures consistent game state across connections
+- The existing connection remains active; the new connection must either wait for the old connection to close or log in with different credentials
+
+```cpp
 // Game Instance
 struct GameInstance {
     int game_id;
@@ -339,6 +347,8 @@ GAME_LOG            - Complete game history
 ```
 ERROR               - Error notification
 DISCONNECT          - Graceful disconnect
+SESSION_EXPIRED     - Session timeout notification
+DUPLICATE_SESSION   - Multiple connections with same session rejected
 ```
 
 ### Sample Protocol Exchanges

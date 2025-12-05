@@ -498,6 +498,15 @@ bool MatchManager::handle_player_disconnect(int user_id) {
     game_ended["loser"] = loser_username;
     game_ended["move_count"] = game->move_history.size();
     game_ended["duration_seconds"] = std::time(nullptr) - game->start_time;
+
+    game_ended["white_player"] = game->white_username;
+    game_ended["black_player"] = game->black_username;
+    
+    // Add move history (game log)
+    game_ended["move_history"] = json::array();
+    for (const auto& move : game->move_history) {
+        game_ended["move_history"].push_back(move);
+    }
     
     broadcast_to_user(winner_id, game_ended);  // Only send to winner (opponent)
     
@@ -695,9 +704,27 @@ void MatchManager::end_game(int game_id, const std::string& result, const std::s
     // Update user stats
     if (result == "WHITE_WIN") {
         UserRepository::increment_wins(white_id);
+        auto white_user = UserRepository::get_user_by_id(white_id);
+        if (white_user.has_value()) {
+            UserRepository::update_rating(white_id, white_user.value().rating + 3);
+        }
+        
+        auto black_user = UserRepository::get_user_by_id(black_id);
+        if (black_user.has_value()) {
+            UserRepository::update_rating(black_id, black_user.value().rating - 3);
+        }
         UserRepository::increment_losses(black_id);
     } else if (result == "BLACK_WIN") {
+        auto black_user = UserRepository::get_user_by_id(black_id);
+        if (black_user.has_value()) {
+            UserRepository::update_rating(black_id, black_user.value().rating + 3);
+        }
         UserRepository::increment_wins(black_id);
+
+        auto white_user = UserRepository::get_user_by_id(white_id);
+        if (white_user.has_value()) {
+            UserRepository::update_rating(white_id, white_user.value().rating - 3);
+        }
         UserRepository::increment_losses(white_id);
     } else {
         UserRepository::increment_draws(white_id);
@@ -721,6 +748,14 @@ void MatchManager::end_game(int game_id, const std::string& result, const std::s
     
     game_ended["move_count"] = game->move_history.size();
     game_ended["duration_seconds"] = std::time(nullptr) - game->start_time;
+    game_ended["white_player"] = white_username;
+    game_ended["black_player"] = black_username;
+    
+    // Add move history (game log)
+    game_ended["move_history"] = json::array();
+    for (const auto& move : game->move_history) {
+        game_ended["move_history"].push_back(move);
+    }
     
     broadcast_to_user(white_id, game_ended);
     broadcast_to_user(black_id, game_ended);

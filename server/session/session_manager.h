@@ -56,9 +56,12 @@ public:
     // Session operations
     bool update_activity(const std::string& session_id);
     bool update_activity_by_socket(int client_socket);
-    void remove_session(const std::string& session_id);
-    void remove_session_by_socket(int client_socket);
-    void remove_session_by_user_id(int user_id);
+    void remove_session_in_cache(const std::string& session_id);
+    void remove_session_in_database(const std::string& session_id);
+    void remove_session_by_socket_in_cache(int client_socket);
+    void remove_session_by_user_id_in_cache(int user_id);
+    void remove_session_by_socket_in_database(int client_socket);
+    void remove_session_by_user_id_in_database(int user_id);
     
     // Authentication
     bool is_authenticated(const std::string& session_id);
@@ -74,8 +77,10 @@ public:
     std::string get_session_id_by_user(int user_id);
     
     // Socket mapping (runtime only - not persisted)
-    void update_socket_mapping(const std::string& session_id, int client_socket);
+    // Returns false if session is already mapped to a different socket (duplicate connection)
+    bool update_socket_mapping(const std::string& session_id, int client_socket);
     void remove_socket_mapping(int client_socket);
+    bool is_user_connected(int user_id);
     
     // Cache management
     void load_session_to_cache(const std::string& session_id);

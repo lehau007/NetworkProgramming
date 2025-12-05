@@ -5,7 +5,7 @@
 
 std::string SessionRepository::get_connection_string() {
     std::map<std::string, std::string> env;
-    std::ifstream file("/mnt/c/Users/msilaptop/Desktop/NetworkProgramming/Project/server/config/.env");
+    std::ifstream file("/mnt/c/Users/msilaptop/Desktop/NetworkProgramming/Project/NetworkProgramming/server/config/.env");
 
     std::string line;
     

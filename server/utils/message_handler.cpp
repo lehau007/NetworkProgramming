@@ -121,11 +121,24 @@ void MessageHandler::handle_verify_session(const json& request) {
     
     std::string session_id = request["session_id"].get<std::string>();
     
-    if (session_mgr->verify_session(session_id)) {
+    if (session_mgr->verify_session(session_id)) { // check session_id in database
         Session* session = session_mgr->get_session(session_id);
         
         // Update socket mapping for this connection
-        session_mgr->update_socket_mapping(session_id, client_socket);
+        if (session_mgr->update_socket_mapping(session_id, client_socket) == false) {
+            // Session is already associated with a different socket (another connection is active)
+            // Send DUPLICATE_SESSION error to inform the user
+            json response;
+            response["type"] = MessageTypes::DUPLICATE_SESSION;
+            response["session_id"] = session_id;
+            response["reason"] = "already_connected";
+            response["message"] = "Multiple connections with the same session are not allowed. Please close the existing connection first.";
+            response["timestamp"] = std::time(nullptr);
+            
+            send_response(response);
+            std::cout << "[MessageHandler] Rejected duplicate session connection for session " << session_id << std::endl;
+            return;
+        } 
         
         // Get user data from database
         auto user_opt = UserRepository::get_user_by_id(session->user_id);
@@ -179,6 +192,18 @@ void MessageHandler::handle_login(const json& request) {
     
     // Authenticate user
     int user_id = UserRepository::authenticate_user(username, password_hash);
+    
+    // Check user in another device
+    if (session_mgr->is_user_connected(user_id)) {
+        json response;
+        response["type"] = MessageTypes::LOGIN_RESPONSE;
+        response["status"] = "failure";
+        response["message"] = "User already connected from another device";
+        
+        send_response(response);
+        std::cout << "[MessageHandler] Login failed - user already connected: " << username << std::endl;
+        return;
+    }
     
     json response;
     response["type"] = MessageTypes::LOGIN_RESPONSE;
@@ -286,7 +311,8 @@ void MessageHandler::handle_logout(const json& request) {
     std::string username = session->username;
     
     // Remove session
-    session_mgr->remove_session(session_id);
+    session_mgr->remove_session_in_cache(session_id);
+    session_mgr->remove_session_in_database(session_id);
     
     json response;
     response["type"] = "LOGOUT_RESPONSE";
@@ -317,25 +343,44 @@ void MessageHandler::handle_get_available_players(const json& request) {
     
     // Get actual online players from player manager
     auto all_users = UserRepository::get_all_users();
+
+    // Find current user index in the list
+    int current_user_index = -1;
+    for (size_t i = 0; i < all_users.size(); ++i) {
+        if (all_users[i].user_id == session->user_id) {
+            current_user_index = i;
+            break;
+        }
+    }
     
     json response;
     response["type"] = MessageTypes::PLAYER_LIST;
     response["players"] = json::array();
     
+    int idx = 0;
     for (const auto& user : all_users) {
-        if (user.user_id != session->user_id) {
-            // One more checking for online
-            auto session_pointer = session_mgr->get_session_by_user_id(user.user_id);
-            if (!session_pointer) 
-                continue;
-            
-            // Check if user on a game?
-            json player;
-            player["username"] = user.username;
-            player["rating"] = user.rating;
-            player["status"] = "available";  // TODO: Get from player manager
-            response["players"].push_back(player);
+        if (idx < current_user_index - 10 || idx >current_user_index + 10 || idx == current_user_index) 
+            continue;
+
+        auto session_pointer = session_mgr->get_session_by_user_id(user.user_id);
+        if (!session_pointer) 
+            continue;
+        
+        
+        json player;
+        player["username"] = user.username;
+        player["rating"] = user.rating;
+        
+        // Check if user on a game
+        bool is_in_game = match_mgr->is_player_in_game(user.user_id);
+        if (is_in_game) {
+            player["status"] = "in_game";
+        } else {
+            player["status"] = "available"; 
         }
+        
+        response["players"].push_back(player);
+        idx += 1;
     }
     
     send_response(response);

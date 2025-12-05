@@ -15,7 +15,7 @@ private:
         map<string, string> env;
 
         // Use absolute path for .env file but in linux
-        ifstream file("/mnt/c/Users/msilaptop/Desktop/NetworkProgramming/Project/server/config/.env");
+        ifstream file("/mnt/c/Users/msilaptop/Desktop/NetworkProgramming/Project/NetworkProgramming/server/config/.env");
         string line;
         
         if (!file.is_open()) {

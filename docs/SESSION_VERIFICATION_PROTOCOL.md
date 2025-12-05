@@ -82,6 +82,26 @@ The first action after establishing a connection is **session verification**. Th
      │    }                                          │
 ```
 
+**Alternative: Duplicate Session (Another Connection Active)**
+
+```
+     │◄─[2c] DUPLICATE_SESSION ──────────────────────┤ (IF ALREADY CONNECTED)
+     │    {                                          │
+     │      "type": "DUPLICATE_SESSION",             │
+     │      "session_id": "abc123...",               │
+     │      "reason": "already_connected",           │
+     │      "message": "Multiple connections with    │
+     │                  the same session are not     │
+     │                  allowed."                    │
+     │    }                                          │
+     │                                               │
+     │   [Connection should be closed]              │
+     │   [User must close other connection first]   │
+     │                                               │
+```
+
+**Note**: This occurs when the session is valid in the database, but another WebSocket/TCP connection is already using it. The server enforces single connection per session policy.
+
 ---
 
 ## Scenario B: Fresh Login (No Session)
@@ -309,6 +329,12 @@ class ChessClient {
                 localStorage.removeItem('session_id');
                 this.sessionId = null;
                 this.showLoginScreen();
+                break;
+                
+            case 'DUPLICATE_SESSION':
+                console.log('Duplicate session:', msg.message);
+                alert('Another connection is already using this session. Please close the other browser tab/window first.');
+                this.ws.close();
                 break;
                 
             case 'LOGIN_RESPONSE':
