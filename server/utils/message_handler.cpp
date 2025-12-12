@@ -359,22 +359,33 @@ void MessageHandler::handle_get_available_players(const json& request) {
     
     int idx = 0;
     for (const auto& user : all_users) {
-        if (idx < current_user_index - 10 || idx >current_user_index + 10 || idx == current_user_index) 
+        if (idx < current_user_index - 10 || idx >current_user_index + 10 || idx == current_user_index) {
+            idx += 1;
             continue;
+        }
 
+        // Check if user is online (has active session)
         auto session_pointer = session_mgr->get_session_by_user_id(user.user_id);
-        if (!session_pointer) 
+        if (!session_pointer) {
+            idx += 1;
             continue;
+        }
         
+        // Check if user is in a game
+        bool is_in_game = match_mgr->is_player_in_game(user.user_id);
+        
+        // Check if user has pending challenge (either sent or received)
+        bool has_challenge = match_mgr->has_pending_challenge(user.user_id);
         
         json player;
         player["username"] = user.username;
         player["rating"] = user.rating;
         
-        // Check if user on a game
-        bool is_in_game = match_mgr->is_player_in_game(user.user_id);
+        // Set status based on availability
         if (is_in_game) {
             player["status"] = "in_game";
+        } else if (has_challenge) {
+            player["status"] = "busy";  // Has pending challenge
         } else {
             player["status"] = "available"; 
         }

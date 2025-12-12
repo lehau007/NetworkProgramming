@@ -755,10 +755,34 @@
                     msg.players.forEach(player => {
                         if (player.username !== username) {
                             const playerDiv = document.createElement('div');
-                            playerDiv.innerHTML = `<span>${player.username} (${player.rating})</span>`;
+                            
+                            // Display player name, rating, and status
+                            let statusText = '';
+                            let statusColor = '';
+                            if (player.status === 'in_game') {
+                                statusText = ' [In Game]';
+                                statusColor = 'color: #ff6b6b;';
+                            } else if (player.status === 'busy') {
+                                statusText = ' [Busy]';
+                                statusColor = 'color: #ffa500;';
+                            } else {
+                                statusText = ' [Available]';
+                                statusColor = 'color: #51cf66;';
+                            }
+                            
+                            playerDiv.innerHTML = `<span>${player.username} (${player.rating})<span style="${statusColor}">${statusText}</span></span>`;
+                            
                             const challengeButton = document.createElement('button');
                             challengeButton.textContent = 'Challenge';
                             challengeButton.onclick = () => challengePlayer(player.username);
+                            
+                            // Disable button if player is not available
+                            if (player.status !== 'available') {
+                                challengeButton.disabled = true;
+                                challengeButton.style.cursor = 'not-allowed';
+                                challengeButton.style.opacity = '0.5';
+                            }
+                            
                             playerDiv.appendChild(challengeButton);
                             playerListDiv.appendChild(playerDiv);
                         }
