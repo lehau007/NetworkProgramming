@@ -49,6 +49,28 @@ private:
         
         return (col >= 0 && col < 8 && row >= 0 && row < 8);
     }
+
+    // Parse promotion character to piece type (q=Queen, r=Rook, b=Bishop, n=Knight)
+    bool parsePromotion(char promotionChar, PieceType &promotionPiece)
+    {
+        switch (tolower(promotionChar))
+        {
+        case 'q':
+            promotionPiece = QUEEN;
+            return true;
+        case 'r':
+            promotionPiece = ROOK;
+            return true;
+        case 'b':
+            promotionPiece = BISHOP;
+            return true;
+        case 'n':
+            promotionPiece = KNIGHT;
+            return true;
+        default:
+            return false;
+        }
+    }
     
     // Convert piece type to string
     string pieceToString(PieceType piece) {
@@ -72,7 +94,8 @@ private:
     }
     
     // Generate descriptive log entry
-    string generateLogEntry(int fromRow, int fromCol, int toRow, int toCol, bool isCapture, bool isCastling) {
+    string generateLogEntry(int fromRow, int fromCol, int toRow, int toCol, bool isCapture, bool isCastling, PieceType promotionPiece = NONE)
+    {
         string log;
         string playerColor = (turn % 2 == 0) ? "White" : "Black";
         int moveNumber = (turn / 2) + 1;
@@ -90,6 +113,11 @@ private:
             
             if (isCapture) {
                 log += " (captures " + pieceToString(board[toRow][toCol]) + ")";
+            }
+
+            if (promotionPiece != NONE)
+            {
+                log += " promotes to " + pieceToString(promotionPiece);
             }
         }
         
@@ -277,8 +305,9 @@ public:
     bool checkMove(string move) {
         if (is_ended) return false;
         
-        // Expected format: "e2e4" (from position to position)
-        if (move.length() != 4) return false;
+        // Expected format: "e2e4" (from position to position) or "e7e8q" (with promotion)
+        if (move.length() != 4 && move.length() != 5)
+            return false;
         
         string from = move.substr(0, 2);
         string to = move.substr(2, 2);
@@ -300,7 +329,37 @@ public:
         
         // Check for castling
         PieceType piece = board[fromRow][fromCol];
-        if (piece == KING && abs(toCol - fromCol) == 2) {
+
+        // Check for pawn promotion
+        if (move.length() == 5)
+        {
+            // Promotion only valid for pawns reaching the last rank
+            if (piece != PAWN)
+                return false;
+
+            int promotionRank = currentPlayerIsWhite ? 0 : 7;
+            if (toRow != promotionRank)
+                return false;
+
+            // Validate promotion piece
+            PieceType promotionPiece;
+            if (!parsePromotion(move[4], promotionPiece))
+                return false;
+        }
+        else
+        {
+            // Check if pawn is reaching promotion rank without promotion specification
+            if (piece == PAWN)
+            {
+                int promotionRank = currentPlayerIsWhite ? 0 : 7;
+                if (toRow == promotionRank)
+                    return false; // Must specify promotion piece
+            }
+        }
+
+        // Check for castling
+        if (piece == KING && abs(toCol - fromCol) == 2)
+        {
             return canCastle(fromRow, fromCol, toRow, toCol, currentPlayerIsWhite);
         }
         
@@ -334,6 +393,15 @@ public:
         PieceType piece = board[fromRow][fromCol];
         bool pieceIsWhite = is_white[fromRow][fromCol];
         bool isCapture = (board[toRow][toCol] != NONE);
+
+        // Check for pawn promotion
+        PieceType promotionPiece = NONE;
+        bool isPromotion = false;
+        if (move.length() == 5)
+        {
+            parsePromotion(move[4], promotionPiece);
+            isPromotion = true;
+        }
         
         // Handle castling
         if (piece == KING && abs(toCol - fromCol) == 2) {
@@ -368,7 +436,7 @@ public:
         }
         
         // Generate log entry before moving (for regular moves)
-        string logEntry = generateLogEntry(fromRow, fromCol, toRow, toCol, isCapture, false);
+        string logEntry = generateLogEntry(fromRow, fromCol, toRow, toCol, isCapture, false, promotionPiece);
         
         // Update castling rights before moving
         if (piece == KING) {
@@ -385,7 +453,16 @@ public:
         }
         
         // Execute move
+        if (isPromotion)
+        {
+            // Pawn promotion: place promoted piece instead of pawn
+            board[toRow][toCol] = promotionPiece;
+        }
+        else
+        {
+            // Regular move
         board[toRow][toCol] = board[fromRow][fromCol];
+        }
         is_white[toRow][toCol] = is_white[fromRow][fromCol];
         board[fromRow][fromCol] = NONE;
         
