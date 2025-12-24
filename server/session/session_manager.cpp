@@ -4,6 +4,7 @@
 #include <random>
 #include <iomanip>
 #include <cstring>
+#include "../database/user_repository.h"
 
 SessionManager* SessionManager::instance = nullptr;
 
@@ -363,26 +364,25 @@ std::string SessionManager::get_session_id_by_user(int user_id) {
 }
 
 bool SessionManager::update_socket_mapping(const std::string& session_id, int client_socket) {
-    // Check if session exists in cache => mean that one session map to one socket
+    pthread_mutex_lock(&mutex);
+
+    // Enforce: one session_id maps to at most one socket.
     for (const auto& pair : sessions_by_socket) {
         if (pair.second == session_id && pair.first != client_socket) {
-            // Session is already associated with a different socket
+            pthread_mutex_unlock(&mutex);
             return false;
         }
     }
-    
-    pthread_mutex_lock(&mutex);
-    
+
     sessions_by_socket[client_socket] = session_id;
-    
+
     // Update socket in cached session
     auto it = sessions_by_id.find(session_id);
     if (it != sessions_by_id.end()) {
         it->second.client_socket = client_socket;
     }
-    
-    pthread_mutex_unlock(&mutex);
 
+    pthread_mutex_unlock(&mutex);
     return true;
 }
 
@@ -393,6 +393,7 @@ void SessionManager::remove_socket_mapping(int client_socket) {
 }
 
 bool SessionManager::is_user_connected(int user_id) {
+    pthread_mutex_lock(&mutex);
     bool connected = sessions_by_user_id.find(user_id) != sessions_by_user_id.end();
     pthread_mutex_unlock(&mutex);
     return connected;
@@ -406,13 +407,21 @@ void SessionManager::load_session_to_cache(const std::string& session_id) {
         return;
     }
     
+    // Fill username for this session from users table.
+    // Without this, flows that rely on session->username (e.g., matchmaking) may emit empty usernames.
+    std::string username;
+    auto user_opt = UserRepository::get_user_by_id(session_info->user_id);
+    if (user_opt.has_value()) {
+        username = user_opt->username;
+    }
+
     pthread_mutex_lock(&mutex);
     
     // Create cache entry
     Session session;
     session.session_id = session_info->session_id;
     session.user_id = session_info->user_id;
-    session.username = "";  // Will be filled when needed
+    session.username = username;
     session.client_socket = -1;  // Not connected yet
     session.created_at = time(nullptr);
     session.last_activity = time(nullptr);
