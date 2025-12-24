@@ -176,6 +176,16 @@ Messages are categorized by direction and purpose:
 }
 ```
 
+### AI_CHALLENGE
+**Purpose**: Send AI challenge request
+```json
+{
+    "type": "AI_CHALLENGE", 
+    "session_id": "abc123", 
+    "depth": 2, // Maybe 3,  
+}
+```
+
 #### CHALLENGE
 **Purpose**: Send challenge to specific player
 
@@ -257,6 +267,15 @@ Messages are categorized by direction and purpose:
 }
 ```
 
+### AI_CHALLENGE_SENT
+**Purpose**: Send AI challenge response
+```json
+{
+    "type": "AI_CHALLENGE_SENT", 
+    "status": "accepted"
+}
+```
+
 ### SERVER → CLIENT (Broadcasts - Unsolicited)
 
 #### CHALLENGE_RECEIVED
@@ -280,8 +299,8 @@ Messages are categorized by direction and purpose:
 {
     "type": "MATCH_STARTED",
     "game_id": 456,
-    "white_player": "player1",
-    "black_player": "player2",
+    "white_player": "player1", 
+    "black_player": "player2", 
     "your_color": "white",  // varies per client
     "opponent_username": "player2",
     "opponent_rating": 1500,
