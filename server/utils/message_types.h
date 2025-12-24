@@ -23,7 +23,9 @@ namespace MessageTypes {
     
     // Matchmaking
     const std::string CHALLENGE = "CHALLENGE";
+    const std::string AI_CHALLENGE = "AI_CHALLENGE";
     const std::string CHALLENGE_SENT = "CHALLENGE_SENT";
+    const std::string AI_CHALLENGE_SENT = "AI_CHALLENGE_SENT";
     const std::string CHALLENGE_RECEIVED = "CHALLENGE_RECEIVED";  // UNSOLICITED
     const std::string ACCEPT_CHALLENGE = "ACCEPT_CHALLENGE";
     const std::string DECLINE_CHALLENGE = "DECLINE_CHALLENGE";

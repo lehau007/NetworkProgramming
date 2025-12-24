@@ -37,6 +37,7 @@ struct GameInstance {
     bool is_active;
     bool white_draw_offered;
     bool black_draw_offered;
+    int ai_depth;  // Only used when one player is AI (-1)
 };
 
 // Callback for broadcasting messages
@@ -44,6 +45,8 @@ using BroadcastCallback = std::function<void(int user_id, const json& message)>;
 
 class MatchManager {
 private:
+    static constexpr int AI_USER_ID = -1;
+
     // Active challenges and games
     static std::map<std::string, Challenge*> active_challenges;     // challenge_id -> Challenge
     static std::map<int, std::string> challenges_by_challenger;     // user_id -> challenge_id
@@ -81,6 +84,10 @@ public:
     bool accept_challenge(const std::string& challenge_id, int& out_game_id);
     bool decline_challenge(const std::string& challenge_id);
     bool cancel_challenge(const std::string& challenge_id);
+    bool accept_ai_challenge(int human_user_id, const std::string& human_username,
+                             const std::string& preferred_color, int ai_depth,
+                             int& out_game_id);
+    
     Challenge* get_challenge(const std::string& challenge_id);
     bool has_pending_challenge(int user_id);  // Either sent or received
     void cleanup_challenge(const std::string& challenge_id);
