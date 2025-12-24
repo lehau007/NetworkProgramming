@@ -741,6 +741,16 @@
                     }
                     break;
                 case 'GAME_ENDED':
+                    // Debug logging for game end data
+                    console.log('GAME_ENDED received:', {
+                        result: msg.result,
+                        winner: msg.winner,
+                        loser: msg.loser,
+                        white_player: msg.white_player,
+                        black_player: msg.black_player,
+                        currentUsername: username
+                    });
+                    
                     // Show game log modal with full game details
                     showGameLogModal(msg);
 
@@ -950,12 +960,32 @@
             let resultText = 'Draw!';
             
             if (gameData.result === 'WHITE_WIN' || gameData.result === 'BLACK_WIN') {
+                // Check if current user is the winner
                 if (gameData.winner === username) {
                     resultClass = 'win';
                     resultText = '🎉 Victory!';
-                } else {
+                } else if (gameData.loser === username) {
+                    // Explicitly check if current user is the loser
                     resultClass = 'loss';
                     resultText = '😔 Defeat';
+                } else {
+                    // Fallback: determine by color if winner/loser names don't match
+                    // This handles edge cases where usernames might not match exactly
+                    const isWhite = (gameData.white_player === username);
+                    const isBlack = (gameData.black_player === username);
+                    
+                    if ((gameData.result === 'WHITE_WIN' && isWhite) || 
+                        (gameData.result === 'BLACK_WIN' && isBlack)) {
+                        resultClass = 'win';
+                        resultText = '🎉 Victory!';
+                    } else if ((gameData.result === 'WHITE_WIN' && isBlack) || 
+                               (gameData.result === 'BLACK_WIN' && isWhite)) {
+                        resultClass = 'loss';
+                        resultText = '😔 Defeat';
+                    } else {
+                        // User is not a participant (spectator or data error)
+                        resultText = 'Game Over';
+                    }
                 }
             } else {
                 resultText = '🤝 Draw';

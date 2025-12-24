@@ -760,7 +760,9 @@ void MatchManager::end_game(int game_id, const std::string& result, const std::s
     broadcast_to_user(white_id, game_ended);
     broadcast_to_user(black_id, game_ended);
     
-    std::cout << "[MatchManager] Game ended: " << game_id << " - " << result << " (" << reason << ")" << std::endl;
+    std::cout << "[MatchManager] Game ended: " << game_id << " - " << result << " (" << reason << ")"
+              << " | Winner: " << game_ended.value("winner", "(none)") 
+              << " | Loser: " << game_ended.value("loser", "(none)") << std::endl;
     
     // Cleanup after a delay (or immediately)
     cleanup_game(game_id);
