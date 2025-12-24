@@ -167,6 +167,15 @@ Messages are categorized by direction and purpose:
 }
 ```
 
+### GET_RANKING_TABLE
+**Purpose**: Request list of all players sorted by point
+```json
+{
+    "type": "GET_RANKING_TABLE",
+    "session_id": "abc123"
+}
+```
+
 #### CHALLENGE
 **Purpose**: Send challenge to specific player
 

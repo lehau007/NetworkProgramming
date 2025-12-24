@@ -1,5 +1,9 @@
 # Build and Deployment Guide
 
+## Frontend run
+**Command:**    cd client
+                python -m http.server 8000
+
 ## Prerequisites
 
 This server is designed to run on **Linux/WSL** environment. The IntelliSense errors you see in Windows are normal and will not affect compilation.
