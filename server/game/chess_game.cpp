@@ -348,13 +348,9 @@ public:
         }
         else
         {
-            // Check if pawn is reaching promotion rank without promotion specification
-            if (piece == PAWN)
-            {
-                int promotionRank = currentPlayerIsWhite ? 0 : 7;
-                if (toRow == promotionRank)
-                    return false; // Must specify promotion piece
-            }
+            // Auto-promotion: if a pawn reaches the last rank without a promotion suffix,
+            // we allow the move and will promote to a Queen in move().
+            // (Still supports underpromotion via 5th char when provided.)
         }
 
         // Check for castling
@@ -397,10 +393,19 @@ public:
         // Check for pawn promotion
         PieceType promotionPiece = NONE;
         bool isPromotion = false;
-        if (move.length() == 5)
-        {
-            parsePromotion(move[4], promotionPiece);
-            isPromotion = true;
+        if (piece == PAWN) {
+            int promotionRank = pieceIsWhite ? 0 : 7;
+            if (toRow == promotionRank) {
+                // Explicit promotion (underpromotion supported)
+                if (move.length() == 5 && parsePromotion(move[4], promotionPiece)) {
+                    isPromotion = true;
+                }
+                // Auto-queen if no suffix provided
+                else if (move.length() == 4) {
+                    promotionPiece = QUEEN;
+                    isPromotion = true;
+                }
+            }
         }
         
         // Handle castling

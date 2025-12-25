@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #333;
+            color: #fff;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            perspective: 1000px;
+        }
+
+        .panel {
+            background-color: #444;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.5s, opacity 0.5s;
+            width: 350px;
+        }
+
+        .hidden {
+            display: none;
+            opacity: 0;
+            transform: rotateY(-30deg) scale(0.9);
+        }
+
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #555;
+            color: #fff;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+
+        #chessboard {
+            width: 480px;
+            height: 480px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            border: 4px solid #666;
+            border-radius: 8px;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            transition: background-color 0.2s;
+        }
+
+        .light {
+            background-color: #f0d9b5;
+        }
+
+        .dark {
+            background-color: #b58863;
+        }
+
+        .piece {
+            cursor: pointer;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .piece.white-piece {
+            color: #ffffff;
+            text-shadow:
+                1px 1px 0 #000,
+                -1px 1px 0 #000,
+                1px -1px 0 #000,
+                -1px -1px 0 #000,
+                0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .piece.black-piece {
+            color: #1a1a1a;
+            text-shadow:
+                1px 1px 0 #666,
+                -1px 1px 0 #666,
+                1px -1px 0 #666,
+                -1px -1px 0 #666,
+                0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .selected {
+            background-color: yellow !important;
+        }
+
+        .in-check {
+            background-color: #ff5252 !important;
+            box-shadow: 0 0 20px rgba(255, 82, 82, 0.8) inset;
+            animation: pulse-check 1s infinite;
+        }
+
+        @keyframes pulse-check {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(255, 82, 82, 0.8) inset;
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(255, 82, 82, 1) inset;
+            }
+        }
+
+        #player-list div {
+            padding: 8px;
+            border-bottom: 1px solid #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #player-list button {
+            width: auto;
+            padding: 5px 10px;
+            font-size: 14px;
+            margin-top: 0;
+        }
+
+        #messages {
+            height: 250px;
+            overflow-y: auto;
+            border: 1px solid #555;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: #3a3a3a;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message {
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .system {
+            color: #ffab40;
+        }
+
+        .sent {
+            color: #81d4fa;
+        }
+
+        .received {
+            color: #c5e1a5;
+        }
+
+        #game-state p {
+            margin: 5px 0;
+        }
+
+        /* User Profile Card */
+        .user-profile {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .user-profile h3 {
+            margin: 0 0 15px 0;
+            font-size: 24px;
+            color: white;
+        }
+
+        .user-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .rating {
+            grid-column: 1 / -1;
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #444;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+            margin: 0;
+        }
+
+        .game-result {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .game-result.win {
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+        }
+
+        .game-result.loss {
+            background: rgba(244, 67, 54, 0.2);
+            border: 2px solid #f44336;
+        }
+
+        .game-result.draw {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #FFC107;
+        }
+
+        .game-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .game-info-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .game-info-label {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .game-info-value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .move-history {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .moves-grid {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .move-number {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .move-white {
+            color: #fff;
+        }
+
+        .move-black {
+            color: #ccc;
+        }
+
+        /* Duplicate session alert */
+        .duplicate-session-alert {
+            background: rgba(255, 152, 0, 0.2);
+            border: 2px solid #ff9800;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .duplicate-session-alert h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .duplicate-session-alert p {
+            margin: 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Login Section -->
+        <div id="login-section" class="panel">
+            <h2>Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Login</button>
+            <button onclick="showRegister()">Register</button>
+            <div id="connection-status" style="text-align: center; color: #aaa; margin-top: 12px;">Connecting…</div>
+        </div>
+
+        <!-- Register Section -->
+        <div id="register-section" class="panel hidden">
+            <h2>Register</h2>
+            <input type="text" id="reg-username" placeholder="Username">
+            <input type="password" id="reg-password" placeholder="Password">
+            <input type="email" id="reg-email" placeholder="Email">
+            <button onclick="register()">Register</button>
+            <button onclick="showLogin()">Back to Login</button>
+        </div>
+
+        <!-- Lobby Section -->
+        <div id="lobby-section" class="panel hidden">
+            <h2>Lobby</h2>
+
+            <div id="connection-status-lobby" style="text-align: center; color: #aaa; margin: -8px 0 12px 0;">Connecting…</div>
+
+            <!-- User Profile Card -->
+            <div class="user-profile">
+                <h3>🏆 <span id="profile-username">Player</span></h3>
+                <div class="user-stats">
+                    <div class="stat-box rating">
+                        <div class="stat-label">Rating</div>
+                        <div class="stat-value" id="profile-rating">1200</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Wins</div>
+                        <div class="stat-value" id="profile-wins">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Losses</div>
+                        <div class="stat-value" id="profile-losses">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Draws</div>
+                        <div class="stat-value" id="profile-draws">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="player-list"></div>
+            <button onclick="getAvailablePlayers()">Refresh Players</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Game Section -->
+        <div id="game-section" class="hidden">
+            <div class="panel">
+                <div id="chessboard"></div>
+            </div>
+            <div class="panel">
+                <h2>Game Info</h2>
+                <div id="game-state"></div>
+                <div id="messages"></div>
+                <button onclick="resign()">Resign</button>
+                <button onclick="offerDraw()">Offer Draw</button>
+            </div>
+        </div>
+
+        <!-- Game Log Modal -->
+        <div id="game-log-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🏁 Game Over</h2>
+                    <button class="modal-close" onclick="closeGameLogModal()">×</button>
+                </div>
+                <div id="game-result-section" class="game-result">
+                    <h3 id="result-title">Result</h3>
+                    <p id="result-reason">Reason</p>
+                </div>
+                <div class="game-info">
+                    <div class="game-info-item">
+                        <div class="game-info-label">White</div>
+                        <div class="game-info-value" id="log-white-player">-</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Black</div>
+                        <div class="game-info-value" id="log-black-player">-</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Moves</div>
+                        <div class="game-info-value" id="log-move-count">0</div>
+                    </div>
+                    <div class="game-info-item">
+                        <div class="game-info-label">Duration</div>
+                        <div class="game-info-value" id="log-duration">0:00</div>
+                    </div>
+                </div>
+                <div class="move-history">
+                    <h4>📜 Move History</h4>
+                    <div id="moves-grid" class="moves-grid">
+                        <!-- Moves will be inserted here -->
+                    </div>
+                </div>
+                <button onclick="closeGameLogModal()" style="margin-top: 20px;">Return to Lobby</button>
+            </div>
+        </div>
+
+        <!-- Duplicate Session Modal -->
+        <div id="duplicate-session-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="duplicate-session-alert">
+                    <h3>⚠️ Session Already Active</h3>
+                    <p id="duplicate-session-message">Another connection is using this session.</p>
+                </div>
+                <p style="text-align: center; color: #aaa;">
+                    You cannot have multiple browser tabs/windows using the same session.
+                    Please close the other connection or log in with different credentials.
+                </p>
+                <button onclick="closeDuplicateSessionModal()">Close</button>
+                <button onclick="forceNewLogin()" style="background-color: #ff9800;">Login with New Session</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>
