@@ -71,7 +71,8 @@ NetworkProgramming/
 │   └── Makefile              # Build configuration
 │
 ├── client/                    # Web-based clients
-│   ├── chess_client.html     # Full chess game UI
+|   ├── js  # All script for logic of index page. 
+│   ├── index.html     # Full chess game UI
 │   ├── test_request.html     # Protocol testing client
 │   └── websocket_test.html   # WebSocket connection test
 │
@@ -397,6 +398,8 @@ This project is licensed under the **Apache License 2.0** - see [LICENSE](LICENS
 ## 👤 Author
 
 **lehau007** - Network Programming Project
+**Sang Pham**
+**Doan Dung**
 
 ---
 
