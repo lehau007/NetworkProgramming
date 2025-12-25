@@ -397,9 +397,9 @@ This project is licensed under the **Apache License 2.0** - see [LICENSE](LICENS
 
 ## 👤 Author
 
-**lehau007** - Network Programming Project
-**Sang Pham**
-**Doan Dung**
+- **lehau007** - Network Programming Project
+- **Sang Pham**
+- **Doan Dung**
 
 ---
 
