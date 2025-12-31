@@ -12,6 +12,7 @@ const state = {
     currentGameId: null,
     userData: null,
     myColor: null,
+    isDuplicateSession: false, // Flag to track if connection was closed due to duplicate session
 };
 
 // UI elements will be initialized after DOM loads
