@@ -6,9 +6,14 @@
 // Create new game
 int GameRepository::create_game(int white_player_id, int black_player_id) {
     try {
+        auto id_or_null = [](int player_id) -> std::string {
+            // AI sentinel (-1) is not a real user; store NULL to satisfy FK constraints.
+            return (player_id < 0) ? "NULL" : std::to_string(player_id);
+        };
+
         std::string query = "INSERT INTO game_history (white_player_id, black_player_id, start_time, moves) "
-                           "VALUES (" + std::to_string(white_player_id) + ", " 
-                           + std::to_string(black_player_id) + ", NOW(), '[]') "
+                           "VALUES (" + id_or_null(white_player_id) + ", " 
+                           + id_or_null(black_player_id) + ", NOW(), '[]') "
                            "RETURNING game_id";
         
         auto result = DatabaseConnection::execute_query(query);

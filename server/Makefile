@@ -1,6 +1,6 @@
 # Compiler settings
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -pthread -Inetwork -Idatabase -Isession -Iutils -Igame
+CXXFLAGS = -std=c++17 -Wall -pthread -Inetwork -Idatabase -Isession -Iutils -Igame -Iai
 LDFLAGS = -lpqxx -lpq -lssl -lcrypto
 
 # Object files
@@ -9,6 +9,7 @@ SESSION_OBJS = session/session_manager.o database/session_repository.o
 UTILS_OBJS = utils/message_handler.o
 DATABASE_OBJS = database/user_repository.o database/game_repository.o
 GAME_OBJS = game/match_manager.o
+AI_OBJS = ai/chess_ai.o
 
 # Targets
 all: test_db chess_server websocket_server test_user_repo test_game_repo test_session_mgr
@@ -30,8 +31,8 @@ test_session_mgr: database/test_session_manager.cpp database/session_repository.
 	$(CXX) $(CXXFLAGS) -Isession -o test_session_mgr database/test_session_manager.cpp database/session_repository.cpp session/session_manager.cpp $(LDFLAGS)
 
 # Chess server with message handlers
-chess_server: $(SOCKET_OBJS) $(SESSION_OBJS) $(UTILS_OBJS) $(DATABASE_OBJS) $(GAME_OBJS) server.o
-	$(CXX) $(SOCKET_OBJS) $(SESSION_OBJS) $(UTILS_OBJS) $(DATABASE_OBJS) $(GAME_OBJS) server.o -o chess_server $(LDFLAGS)
+chess_server: $(SOCKET_OBJS) $(SESSION_OBJS) $(UTILS_OBJS) $(DATABASE_OBJS) $(GAME_OBJS) $(AI_OBJS) server.o
+	$(CXX) $(SOCKET_OBJS) $(SESSION_OBJS) $(UTILS_OBJS) $(DATABASE_OBJS) $(GAME_OBJS) $(AI_OBJS) server.o -o chess_server $(LDFLAGS)
 
 # WebSocket server
 websocket_server: $(SOCKET_OBJS) websocket_server_example.o
@@ -73,9 +74,13 @@ database/game_repository.o: database/game_repository.cpp database/game_repositor
 game/match_manager.o: game/match_manager.cpp game/match_manager.h game/chess_game.cpp
 	$(CXX) $(CXXFLAGS) -c game/match_manager.cpp -o game/match_manager.o
 
+# Compile AI objects
+ai/chess_ai.o: ai/chess_ai.cpp ai/chess_ai.h
+	$(CXX) $(CXXFLAGS) -c ai/chess_ai.cpp -o ai/chess_ai.o
+
 # Clean build artifacts
 clean:
-	rm -f test_db test_user_repo test_game_repo test_session_mgr chess_server websocket_server *.o network/*.o session/*.o database/*.o utils/*.o game/*.o
+	rm -f test_db test_user_repo test_game_repo test_session_mgr chess_server websocket_server *.o network/*.o session/*.o database/*.o utils/*.o game/*.o ai/*.o
 
 # Setup database schema
 setup_db:

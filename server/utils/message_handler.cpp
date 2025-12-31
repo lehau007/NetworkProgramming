@@ -70,6 +70,8 @@ void MessageHandler::handle_message(const std::string& message_str) {
             handle_get_available_players(message);
         } else if (msg_type == MessageTypes::CHALLENGE) {
             handle_challenge(message);
+        } else if (msg_type == MessageTypes::AI_CHALLENGE) {
+            handle_ai_challenge(message);
         } else if (msg_type == MessageTypes::ACCEPT_CHALLENGE) {
             handle_accept_challenge(message);
         } else if (msg_type == MessageTypes::DECLINE_CHALLENGE) {
@@ -474,6 +476,65 @@ void MessageHandler::handle_challenge(const json& request) {
     send_response(response);
     std::cout << "[MessageHandler] Challenge sent from " << session->username 
               << " to " << target_username << std::endl;
+}
+
+void MessageHandler::handle_ai_challenge(const json& request) {
+    std::cout << "[MessageHandler] AI CHALLENGE request" << std::endl;
+
+    if (!request.contains("session_id")) {
+        send_error("MISSING_FIELD", "session_id is required");
+        return;
+    }
+    
+    Session* session = validate_session(request["session_id"].get<std::string>());
+    if (!session) {
+        send_error("INVALID_SESSION", "Session not found or expired");
+        return;
+    }
+
+    const std::string preferred_color = request.contains("preferred_color")
+        ? request["preferred_color"].get<std::string>()
+        : "random";
+
+    int depth = 2;
+    if (request.contains("depth")) {
+        try {
+            depth = request["depth"].get<int>();
+        } catch (...) {
+            depth = 2;
+        }
+    }
+
+    // Send AI_CHALLENGE_SENT first (per spec)
+    json ai_challenge_sent_response;
+    ai_challenge_sent_response["type"] = MessageTypes::AI_CHALLENGE_SENT;
+    ai_challenge_sent_response["status"] = "accepted";
+    send_response(ai_challenge_sent_response);
+
+//     ```json
+// {
+//     "type": "MATCH_STARTED",
+//     "game_id": 456,
+//     "white_player": "player1", 
+//     "black_player": "player2", 
+//     "your_color": "white",  // varies per client
+//     "opponent_username": "player2",
+//     "opponent_rating": 1500,
+//     "time_control": "10+0"  // optional
+// }
+// ```
+
+    // Create a new game with AI opponent. Note: id of AI is fixed -1.
+    int game_id = -1;
+    if (!match_mgr->accept_ai_challenge(session->user_id, session->username, preferred_color, depth, game_id)) {
+        send_error("AI_CHALLENGE_FAILED", "Failed to create AI game");
+        return;
+    }
+
+    std::cout << "[MessageHandler] AI game created: " << game_id
+              << " for user " << session->username
+              << " preferred_color=" << preferred_color
+              << " depth=" << depth << std::endl;
 }
 
 void MessageHandler::handle_accept_challenge(const json& request) {

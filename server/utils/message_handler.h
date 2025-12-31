@@ -48,6 +48,7 @@ public:
     void handle_accept_challenge(const json& request);
     void handle_decline_challenge(const json& request);
     void handle_cancel_challenge(const json& request);
+    void handle_ai_challenge(const json& request);
     
     // Gameplay handlers
     void handle_move(const json& request);

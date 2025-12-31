@@ -1,3 +1,6 @@
+#ifndef CHESS_GAME_CPP
+#define CHESS_GAME_CPP
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -330,49 +333,33 @@ public:
         // Check for castling
         PieceType piece = board[fromRow][fromCol];
 
-        // Check for pawn promotion
-        if (move.length() == 5)
-        {
-            // Promotion only valid for pawns reaching the last rank
-            if (piece != PAWN)
-                return false;
-
+        // Promotion validation:
+        // - If a 5th char is provided, it must be a pawn promoting on the last rank.
+        // - If no 5th char is provided and a pawn reaches the last rank, we allow it
+        //   (auto-promotes to Queen in move()).
+        if (move.length() == 5) {
+            if (piece != PAWN) return false;
             int promotionRank = currentPlayerIsWhite ? 0 : 7;
-            if (toRow != promotionRank)
-                return false;
-
-            // Validate promotion piece
+            if (toRow != promotionRank) return false;
             PieceType promotionPiece;
-            if (!parsePromotion(move[4], promotionPiece))
-                return false;
-        }
-        else
-        {
-            // Auto-promotion: if a pawn reaches the last rank without a promotion suffix,
-            // we allow the move and will promote to a Queen in move().
-            // (Still supports underpromotion via 5th char when provided.)
+            if (!parsePromotion(move[4], promotionPiece)) return false;
         }
 
         // Check for castling
-        if (piece == KING && abs(toCol - fromCol) == 2)
-        {
+        if (piece == KING && abs(toCol - fromCol) == 2) {
             return canCastle(fromRow, fromCol, toRow, toCol, currentPlayerIsWhite);
         }
-        
+
         // Validate piece-specific move
         if (!isValidPieceMove(piece, fromRow, fromCol, toRow, toCol, currentPlayerIsWhite)) {
             return false;
         }
-        
+
         // CRITICAL: Check if this move would leave own king in check
-        // This prevents:
-        // 1. Moving into check
-        // 2. Moving away and exposing king to check
-        // 3. Not resolving existing check
         if (wouldBeInCheckAfterMove(fromRow, fromCol, toRow, toCol)) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -718,6 +705,76 @@ public:
         // Stalemate = NOT in check AND no legal moves
         return !isKingInCheck(isWhite) && !hasLegalMoves(isWhite);
     }
+
+    // ==== Helpers for server-side AI ====
+    bool isWhiteToMove() {
+        return (turn % 2 == 0);
+    }
+
+    // Material-only evaluation: positive means white is ahead.
+    int evaluateMaterialScore() {
+        auto value = [](PieceType p) -> int {
+            switch (p) {
+                case PAWN: return 100;
+                case KNIGHT: return 320;
+                case BISHOP: return 330;
+                case ROOK: return 500;
+                case QUEEN: return 900;
+                case KING: return 20000;
+                default: return 0;
+            }
+        };
+
+        int score = 0;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (board[r][c] == NONE) continue;
+                int v = value(board[r][c]);
+                score += is_white[r][c] ? v : -v;
+            }
+        }
+        return score;
+    }
+
+    vector<string> getLegalMovesForCurrentPlayer() {
+        return getLegalMoves(isWhiteToMove());
+    }
+
+    vector<string> getLegalMoves(bool forWhite) {
+        vector<string> moves;
+        if (is_ended) return moves;
+
+        for (int fromRow = 0; fromRow < 8; fromRow++) {
+            for (int fromCol = 0; fromCol < 8; fromCol++) {
+                if (board[fromRow][fromCol] == NONE) continue;
+                if (is_white[fromRow][fromCol] != forWhite) continue;
+
+                PieceType piece = board[fromRow][fromCol];
+
+                for (int toRow = 0; toRow < 8; toRow++) {
+                    for (int toCol = 0; toCol < 8; toCol++) {
+                        if (fromRow == toRow && fromCol == toCol) continue;
+                        if (board[toRow][toCol] != NONE && is_white[toRow][toCol] == forWhite) continue;
+
+                        bool validPieceMove = false;
+                        if (piece == KING && abs(toCol - fromCol) == 2 && fromRow == toRow) {
+                            validPieceMove = canCastle(fromRow, fromCol, toRow, toCol, forWhite);
+                        } else {
+                            validPieceMove = isValidPieceMove(piece, fromRow, fromCol, toRow, toCol, forWhite);
+                        }
+
+                        if (!validPieceMove) continue;
+                        if (wouldBeInCheckAfterMove(fromRow, fromCol, toRow, toCol)) continue;
+
+                        string mv = positionToNotation(fromRow, fromCol) + positionToNotation(toRow, toCol);
+                        moves.push_back(mv);
+                    }
+                }
+            }
+        }
+
+        return moves;
+    }
     
     GameResult getResult() { return result; }
     bool isEnded() { return is_ended; }
@@ -761,6 +818,11 @@ public:
 //     }
     
 //     game.displayGameLog();
+
+//     return 0;
+// }
+
+#endif // CHESS_GAME_CPP
     
 //     return 0;
 // }
