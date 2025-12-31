@@ -33,7 +33,7 @@ void* handle_client_connection(void *arg) {
 
     cout << "[Server] New connection from " << client_ip << " .Client socket: " << client_socket << endl;
     
-    MessageHandler msg_handler(client_socket);
+    MessageHandler msg_handler(client_socket, client_ip);
 
     { // Scope for WebSocketHandler
         WebSocketHandler ws_handler(client_socket);

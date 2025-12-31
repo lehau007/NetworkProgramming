@@ -4,7 +4,7 @@
 #include <iostream>
 #include <ctime>
 
-MessageHandler::MessageHandler(int socket) : client_socket(socket) {
+MessageHandler::MessageHandler(int socket, std::string ip_address) : client_socket(socket), ip_address(ip_address) {
     session_mgr = SessionManager::get_instance();
     match_mgr = MatchManager::get_instance();
 }
@@ -220,7 +220,7 @@ void MessageHandler::handle_login(const json& request) {
                 user_id, 
                 username, 
                 client_socket, 
-                "127.0.0.1"  // TODO: Get real IP address.
+                this->ip_address
             );
             
             response["status"] = "success";

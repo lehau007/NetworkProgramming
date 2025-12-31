@@ -1,9 +1,5 @@
 # Build and Deployment Guide
 
-## Frontend build:
-cd client
-python -m http.server 8000
-
 ## Frontend run
 **Command:**    cd client
                 python -m http.server 8000

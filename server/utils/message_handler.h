@@ -2,6 +2,8 @@
 #define MESSAGE_HANDLER_H
 
 #include <string>
+#include <unistd.h>
+#include <sys/types.h>
 #include <nlohmann/json.hpp>
 #include "../session/session_manager.h"
 #include "../database/user_repository.h"
@@ -15,6 +17,7 @@ private:
     SessionManager* session_mgr;
     MatchManager* match_mgr;
     int client_socket;
+    std::string ip_address;
     
     // Helper methods
     void send_response(const json& response);
@@ -23,7 +26,7 @@ private:
     void broadcast_to_user(int user_id, const json& message);
     
 public:
-    MessageHandler(int socket);
+    MessageHandler(int socket, std::string ip_address);
     ~MessageHandler();
     
     // Main message dispatcher
