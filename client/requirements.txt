@@ -1,0 +1,2 @@
+# No additional Python packages required
+# Python 3.x built-in http.server module is sufficient
