@@ -96,6 +96,56 @@ export function initLobby({ state, ui, send, clearSession }) {
         });
     }
 
+    function showLeaderboard() {
+        if (!state.sessionId) {
+            alert('Not logged in');
+            return;
+        }
+        send({
+            type: 'GET_LEADERBOARD',
+            session_id: state.sessionId,
+            limit: 50
+        });
+    }
+
+    function closeLeaderboard() {
+        const modal = document.getElementById('leaderboard-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function renderLeaderboard(players) {
+        const modal = document.getElementById('leaderboard-modal');
+        const listDiv = document.getElementById('leaderboard-list');
+        
+        if (!listDiv || !modal) return;
+        
+        listDiv.innerHTML = '';
+        
+        if (players.length === 0) {
+            listDiv.innerHTML += '<p style="text-align: center; color: #aaa;">No players found</p>';
+        } else {
+            players.forEach((player) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.innerHTML = `
+                    <span>
+                        <span class="leaderboard-rank">#${player.rank}</span>
+                        ${player.username}
+                    </span>
+                    <span>
+                        ⭐ ${player.rating} 
+                    </span>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+        
+        modal.style.display = 'flex';
+        modal.style.opacity = '1';
+        modal.style.visibility = 'visible';
+        console.log('Leaderboard displayed with', players.length, 'players');
+    }
+
     function handleMessage(msg) {
         switch (msg.type) {
             case 'PLAYER_LIST':
@@ -112,6 +162,10 @@ export function initLobby({ state, ui, send, clearSession }) {
                 return true;
             }
 
+            case 'LEADERBOARD':
+                renderLeaderboard(msg.players || []);
+                return true;
+
             default:
                 return false;
         }
@@ -120,6 +174,8 @@ export function initLobby({ state, ui, send, clearSession }) {
     // Keep existing inline HTML onclicks working
     window.getAvailablePlayers = getAvailablePlayers;
     window.challengePlayer = challengePlayer;
+    window.showLeaderboard = showLeaderboard;
+    window.closeLeaderboard = closeLeaderboard;
     window.logout = logout;
 
     return {
