@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: chess-client
+    env: python
+    buildCommand: echo "No build required"
+    startCommand: python3 -m http.server $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
