@@ -26,17 +26,31 @@ WebSocketHandler::~WebSocketHandler() {
 // ==================== Handshake Implementation ====================
 
 bool WebSocketHandler::perform_handshake() {
-    // Read HTTP upgrade request
-    char buffer[4096];
-    ssize_t received = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+    // Read HTTP upgrade request - must read until \r\n\r\n
+    std::string request;
+    char buffer[1024];
     
-    if (received <= 0) {
-        std::cerr << "Failed to receive handshake request" << std::endl;
-        return false;
+    while (true) {
+        ssize_t received = recv(socket_fd, buffer, sizeof(buffer), 0);
+        
+        if (received <= 0) {
+            std::cerr << "Failed to receive handshake request" << std::endl;
+            return false;
+        }
+        
+        request.append(buffer, received);
+        
+        // Check if we have received the complete HTTP header (ends with \r\n\r\n)
+        if (request.find("\r\n\r\n") != std::string::npos) {
+            break;
+        }
+        
+        // Safety check: prevent infinite loop if request is too large
+        if (request.size() > 8192) {
+            std::cerr << "HTTP request too large" << std::endl;
+            return false;
+        }
     }
-    
-    buffer[received] = '\0';
-    std::string request(buffer, received);
     
     // Parse WebSocket key
     std::string websocket_key;
@@ -63,22 +77,45 @@ bool WebSocketHandler::perform_handshake() {
 }
 
 bool WebSocketHandler::parse_http_request(const std::string& request, std::string& websocket_key) {
-    // Look for Sec-WebSocket-Key header
-    std::string key_header = "Sec-WebSocket-Key: ";
-    size_t key_pos = request.find(key_header);
+    // Convert request to lowercase for searching
+    std::string request_lower = request;
+    std::string key_header = "sec-websocket-key:";
+    
+    // Find the header position (case-insensitive)
+    size_t key_pos = std::string::npos;
+    for (size_t i = 0; i < request.length(); i++) {
+        request_lower[i] = std::tolower(request[i]);
+    }
+    
+    key_pos = request_lower.find(key_header);
     
     if (key_pos == std::string::npos) {
+        std::cerr << "Sec-WebSocket-Key header not found" << std::endl;
         return false;
     }
     
+    // Find the start of the value (skip header name and optional spaces)
     size_t key_start = key_pos + key_header.length();
+    while (key_start < request.length() && request[key_start] == ' ') {
+        key_start++;
+    }
+    
+    // Find the end of the header line
     size_t key_end = request.find("\r\n", key_start);
     
     if (key_end == std::string::npos) {
+        std::cerr << "Malformed Sec-WebSocket-Key header" << std::endl;
         return false;
     }
     
+    // Extract the key value (from original request, not lowercased)
     websocket_key = request.substr(key_start, key_end - key_start);
+    
+    // Trim trailing spaces
+    while (!websocket_key.empty() && websocket_key.back() == ' ') {
+        websocket_key.pop_back();
+    }
+    
     return !websocket_key.empty();
 }
 

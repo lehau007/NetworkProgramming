@@ -3,7 +3,8 @@ import { initLobby } from './lobby.js';
 import { initGame } from './game.js';
 
 // Dynamic WebSocket URL based on current host
-const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8080`;
+// const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:8080`;
+const wsUrl = `wss://unfatalistically-sporting-keaton.ngrok-free.dev/`;
 
 const state = {
     ws: null,
@@ -159,6 +160,7 @@ function connect() {
     }
 
     setConnectionStatus(`Connecting to ${wsUrl}…`, '#aaa');
+    console.log("Connecting to " + wsUrl);
 
     state.ws = new WebSocket(wsUrl);
 
