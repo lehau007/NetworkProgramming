@@ -2,6 +2,7 @@
 #include "../database/game_repository.h"
 #include "../database/user_repository.h"
 #include "../ai/chess_ai.h"
+#include "../utils/message_types.h"
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -76,6 +77,18 @@ void MatchManager::broadcast_to_user(int user_id, const json& message) {
     }
 }
 
+namespace {
+std::string game_result_from_enum(GameResult result) {
+    if (result == WHITE_WIN) return "WHITE_WIN";
+    if (result == BLACK_WIN) return "BLACK_WIN";
+    return "DRAW";
+}
+
+std::string winner_result_for_player(bool player_is_white) {
+    return player_is_white ? "WHITE_WIN" : "BLACK_WIN";
+}
+}
+
 // ============================================================================
 // CHALLENGE MANAGEMENT
 // ============================================================================
@@ -147,7 +160,10 @@ bool MatchManager::accept_challenge(const std::string& challenge_id, int& out_ga
         black_username = challenge->challenger_username;
     } else {
         // Random assignment
-        bool challenger_is_white = (std::rand() % 2 == 0);
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<int> dis(0, 1);
+        bool challenger_is_white = (dis(gen) == 0);
         if (challenger_is_white) {
             white_player_id = challenge->challenger_user_id;
             white_username = challenge->challenger_username;
@@ -310,6 +326,8 @@ int MatchManager::create_game(int white_player_id, const std::string& white_user
     game->white_draw_offered = false;
     game->black_draw_offered = false;
     game->ai_depth = 2;
+    game->ai_think_ms = 0;
+    game->ai_nodes_searched = 0;
     
     active_games[game_id] = game;
     if (white_player_id != AI_USER_ID) {
@@ -331,6 +349,8 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
                                        const std::string& preferred_color, int ai_depth,
                                        int& out_game_id) {
     const std::string ai_username = "AI";
+    if (ai_depth < 1) ai_depth = 1;
+    if (ai_depth > 6) ai_depth = 6;
 
     int white_id = human_user_id;
     int black_id = AI_USER_ID;
@@ -345,6 +365,19 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
         white_name = ai_username;
         black_name = human_username;
         your_color = "black";
+        opponent_username = ai_username;
+    } else if (preferred_color == "random") {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<int> dis(0, 1);
+        bool human_white = (dis(gen) == 0);
+        if (!human_white) {
+            white_id = AI_USER_ID;
+            black_id = human_user_id;
+            white_name = ai_username;
+            black_name = human_username;
+            your_color = "black";
+        }
         opponent_username = ai_username;
     }
 
@@ -369,6 +402,8 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
     match_started["black_player"] = black_name;
     match_started["your_color"] = your_color;
     match_started["opponent_username"] = opponent_username;
+    match_started["opponent_is_ai"] = true;
+    match_started["ai_depth"] = ai_depth;
 
     broadcast_to_user(human_user_id, match_started);
 
@@ -381,23 +416,27 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
         GameInstance* game = get_game(out_game_id);
         if (game && game->is_active) {
             ChessAI ai(game->ai_depth);
-            std::string ai_move;
+            ChessAIMoveResult ai_result;
             {
                 pthread_mutex_lock(&mutex);
-                ai_move = ai.make_move(*game->chess_engine, /*ai_is_white=*/true);
+                ai_result = ai.make_move(*game->chess_engine, /*ai_is_white=*/true);
+                game->ai_think_ms = ai_result.ai_think_ms;
+                game->ai_nodes_searched = ai_result.nodes_searched;
+
+                const std::string& ai_move = ai_result.move;
                 if (!ai_move.empty()) {
                     bool ok = game->chess_engine->move(ai_move);
                     if (ok) {
                         game->move_history.push_back(ai_move);
                         GameRepository::add_move_to_game(out_game_id, ai_move);
                     } else {
-                        ai_move.clear();
+                        ai_result.move.clear();
                     }
                 }
                 pthread_mutex_unlock(&mutex);
             }
 
-            if (!ai_move.empty()) {
+            if (!ai_result.move.empty()) {
                 const int turn = game->chess_engine->getTurn();
                 const bool next_player_is_white = (turn % 2 == 0);
                 const bool opponent_king_in_check = game->chess_engine->isKingInCheck(next_player_is_white);
@@ -405,7 +444,7 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
                 json opponent_move;
                 opponent_move["type"] = "OPPONENT_MOVE";
                 opponent_move["game_id"] = out_game_id;
-                opponent_move["move"] = ai_move;
+                opponent_move["move"] = ai_result.move;
                 opponent_move["move_number"] = turn;
                 opponent_move["is_check"] = opponent_king_in_check;
                 opponent_move["captured_piece"] = nullptr;
@@ -414,8 +453,26 @@ bool MatchManager::accept_ai_challenge(int human_user_id, const std::string& hum
                 opponent_move["current_turn"] = next_player_is_white ? "white" : "black";
                 opponent_move["white_player"] = game->white_username;
                 opponent_move["black_player"] = game->black_username;
+                opponent_move["ai_think_ms"] = game->ai_think_ms;
+                opponent_move["ai_nodes_searched"] = game->ai_nodes_searched;
 
                 broadcast_to_user(human_user_id, opponent_move);
+            } else {
+                if (game->chess_engine->isEnded()) {
+                    end_game(out_game_id, game_result_from_enum(game->chess_engine->getResult()), "checkmate");
+                } else {
+                    json error_response;
+                    error_response["type"] = MessageTypes::ERROR;
+                    error_response["error_code"] = ai_result.timed_out ? "AI_TIMEOUT" : "AI_NO_MOVE";
+                    error_response["message"] = ai_result.timed_out
+                        ? "AI exceeded thinking time"
+                        : "AI could not generate a legal move";
+                    error_response["severity"] = "error";
+                    error_response["timestamp"] = std::time(nullptr);
+                    broadcast_to_user(human_user_id, error_response);
+
+                    end_game(out_game_id, "BLACK_WIN", ai_result.timed_out ? "ai_timeout" : "ai_no_move");
+                }
             }
         }
     }
@@ -555,35 +612,40 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
         if (latest_game && latest_game->is_active) {
             const bool ai_is_white = (latest_game->white_player_id == AI_USER_ID);
             const int human_id = player_id;
+            const bool human_is_white = (human_id == latest_game->white_player_id);
 
             ChessAI ai(latest_game->ai_depth);
-            std::string ai_move;
+            ChessAIMoveResult ai_move_result;
 
             pthread_mutex_lock(&mutex);
-            ai_move = ai.make_move(*latest_game->chess_engine, ai_is_white);
+            ai_move_result = ai.make_move(*latest_game->chess_engine, ai_is_white);
+            latest_game->ai_think_ms = ai_move_result.ai_think_ms;
+            latest_game->ai_nodes_searched = ai_move_result.nodes_searched;
+
+            const std::string& ai_move = ai_move_result.move;
             if (!ai_move.empty()) {
                 bool ok = latest_game->chess_engine->move(ai_move);
                 if (ok) {
                     latest_game->move_history.push_back(ai_move);
                     GameRepository::add_move_to_game(game_id, ai_move);
                 } else {
-                    ai_move.clear();
+                    ai_move_result.move.clear();
                 }
             }
 
             const int new_turn = latest_game->chess_engine->getTurn();
             const bool ai_is_ended = latest_game->chess_engine->isEnded();
-            const GameResult ai_result = latest_game->chess_engine->getResult();
+            const GameResult ai_game_result = latest_game->chess_engine->getResult();
             const bool next_player_is_white = (new_turn % 2 == 0);
             const bool opponent_king_in_check_after_ai = latest_game->chess_engine->isKingInCheck(next_player_is_white);
 
             pthread_mutex_unlock(&mutex);
 
-            if (!ai_move.empty()) {
+            if (!ai_move_result.move.empty()) {
                 json ai_opponent_move;
                 ai_opponent_move["type"] = "OPPONENT_MOVE";
                 ai_opponent_move["game_id"] = game_id;
-                ai_opponent_move["move"] = ai_move;
+                ai_opponent_move["move"] = ai_move_result.move;
                 ai_opponent_move["move_number"] = new_turn;
                 ai_opponent_move["is_check"] = opponent_king_in_check_after_ai;
                 ai_opponent_move["captured_piece"] = nullptr;
@@ -592,16 +654,29 @@ bool MatchManager::make_move(int game_id, int player_id, const std::string& move
                 ai_opponent_move["current_turn"] = next_player_is_white ? "white" : "black";
                 ai_opponent_move["white_player"] = latest_game->white_username;
                 ai_opponent_move["black_player"] = latest_game->black_username;
+                ai_opponent_move["ai_think_ms"] = latest_game->ai_think_ms;
+                ai_opponent_move["ai_nodes_searched"] = latest_game->ai_nodes_searched;
 
-                broadcast_to_user(human_id, ai_opponent_move);
+                out_response["ai_followup_move"] = ai_opponent_move;
+            } else if (!ai_is_ended) {
+                json error_response;
+                error_response["type"] = MessageTypes::ERROR;
+                error_response["error_code"] = ai_move_result.timed_out ? "AI_TIMEOUT" : "AI_NO_MOVE";
+                error_response["message"] = ai_move_result.timed_out
+                    ? "AI exceeded thinking time"
+                    : "AI could not generate a legal move";
+                error_response["severity"] = "error";
+                error_response["timestamp"] = std::time(nullptr);
+                out_response["ai_followup_error"] = error_response;
+
+                end_game(game_id,
+                         winner_result_for_player(human_is_white),
+                         ai_move_result.timed_out ? "ai_timeout" : "ai_no_move");
+                return true;
             }
 
             if (ai_is_ended) {
-                std::string result_str;
-                if (ai_result == WHITE_WIN) result_str = "WHITE_WIN";
-                else if (ai_result == BLACK_WIN) result_str = "BLACK_WIN";
-                else result_str = "DRAW";
-                end_game(game_id, result_str, "checkmate");
+                end_game(game_id, game_result_from_enum(ai_game_result), "checkmate");
             }
         }
     }
@@ -797,6 +872,8 @@ json MatchManager::get_game_state(int game_id) {
     state["is_active"] = game->is_active;
     state["is_ended"] = game->chess_engine->isEnded();
     state["board_state"] = game->chess_engine->getFEN();
+    state["is_ai_game"] = (game->white_player_id == AI_USER_ID || game->black_player_id == AI_USER_ID);
+    state["ai_depth"] = game->ai_depth;
     
     // Move history
     state["move_history"] = json::array();

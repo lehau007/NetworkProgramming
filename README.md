@@ -26,6 +26,17 @@ A fully-featured online chess game server implementing TCP/IP socket programming
 - ✅ **Challenge System** - Player matching and game creation
 - ✅ **PostgreSQL Integration** - User data, game history, and statistics
 - ✅ **Game Features** - Resign, draw offers, rematch, game history, leaderboard
+- ✅ **AI Mode** - Human vs AI using minimax with alpha-beta pruning (difficulty + color selection)
+
+### AI Mode Notes
+
+- `AI_CHALLENGE` supports `preferred_color` (`white|black|random`) and optional `difficulty` (`easy|medium|hard`).
+- Server enforces depth clamp (`1..6`) and includes AI move telemetry in `OPPONENT_MOVE`:
+    - `ai_think_ms`
+    - `ai_nodes_searched`
+- AI-specific end reasons can be emitted in `GAME_ENDED`:
+    - `ai_timeout`
+    - `ai_no_move`
 
 ---
 

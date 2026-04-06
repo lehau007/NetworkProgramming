@@ -34,6 +34,8 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
             checkmate: 'Checkmate',
             resignation: 'Resignation',
             timeout: 'Time Out',
+            ai_timeout: 'AI Timeout',
+            ai_no_move: 'AI Failed to Move',
             draw_agreement: 'Draw by Agreement',
             stalemate: 'Stalemate',
             opponent_disconnected: 'Opponent Disconnected',
@@ -276,10 +278,12 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
         const gameStateDiv = document.getElementById('game-state');
         if (!gameStateDiv) return;
 
+        const aiTag = state.isAiGame ? ' (AI)' : '';
+
         gameStateDiv.innerHTML = `
             <p id="turn-display"><strong>Turn:</strong> <span id="turn-text">Loading...</span></p>
-            <p><strong>White:</strong> ${gameState.white_player}</p>
-            <p><strong>Black:</strong> ${gameState.black_player}</p>
+            <p><strong>White:</strong> ${gameState.white_player}${gameState.white_player === 'AI' ? aiTag : ''}</p>
+            <p><strong>Black:</strong> ${gameState.black_player}${gameState.black_player === 'AI' ? aiTag : ''}</p>
         `;
 
         if (gameState.board_state) {
@@ -293,12 +297,33 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
 
     function updateTurnDisplay(currentTurn) {
         const turnTextElement = document.getElementById('turn-text');
+        const aiThinking = document.getElementById('ai-thinking-indicator');
         if (!turnTextElement) return;
 
         if (currentTurn === state.myColor) {
             turnTextElement.innerHTML = `<span style="color: #4CAF50; font-weight: bold;">YOUR TURN (${state.myColor})</span>`;
+            if (aiThinking) aiThinking.style.display = 'none';
         } else {
             turnTextElement.innerHTML = `<span style="color: #ff9800;">Opponent's turn (${currentTurn})</span>`;
+            if (state.isAiGame && aiThinking) {
+                aiThinking.style.display = 'block';
+            }
+        }
+    }
+
+    function updateAiTelemetry(msg) {
+        const metrics = document.getElementById('ai-last-metrics');
+        if (!metrics) return;
+
+        if (!state.isAiGame) {
+            metrics.style.display = 'none';
+            return;
+        }
+
+        if (typeof msg.ai_think_ms === 'number') {
+            const nodes = typeof msg.ai_nodes_searched === 'number' ? ` | nodes ${msg.ai_nodes_searched}` : '';
+            metrics.textContent = `Last AI move: ${msg.ai_think_ms} ms${nodes}`;
+            metrics.style.display = 'block';
         }
     }
 
@@ -360,6 +385,8 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
             case 'MATCH_STARTED':
                 state.currentGameId = msg.game_id;
                 state.myColor = msg.your_color;
+                state.isAiGame = !!msg.opponent_is_ai || msg.opponent_username === 'AI';
+                state.aiDepth = msg.ai_depth ?? null;
                 createChessboard();
                 ui.showGame();
                 send({ type: 'GET_GAME_STATE', session_id: state.sessionId, game_id: msg.game_id });
@@ -367,6 +394,12 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
 
             case 'GAME_STATE':
                 state.currentGameId = msg.game_id;
+                if (typeof msg.is_ai_game === 'boolean') {
+                    state.isAiGame = msg.is_ai_game;
+                }
+                if (typeof msg.ai_depth === 'number') {
+                    state.aiDepth = msg.ai_depth;
+                }
                 updateGameState(msg);
                 if (msg.current_turn) {
                     updateTurnDisplay(msg.current_turn);
@@ -377,6 +410,7 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
                 } else {
                     clearCheckHighlight();
                 }
+                updateAiTelemetry(msg);
                 ui.showGame();
                 return true;
 
@@ -391,6 +425,7 @@ export function initGame({ state, ui, send, addMessage, lobby }) {
                 } else {
                     clearCheckHighlight();
                 }
+                updateAiTelemetry(msg);
                 return true;
 
             case 'GAME_ENDED':

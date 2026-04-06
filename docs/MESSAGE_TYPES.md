@@ -182,7 +182,9 @@ Messages are categorized by direction and purpose:
 {
     "type": "AI_CHALLENGE", 
     "session_id": "abc123", 
-    "depth": 2, // Maybe 3,  
+    "preferred_color": "random",  // "white", "black", "random"
+    "difficulty": "medium",       // optional: "easy", "medium", "hard"
+    "depth": 2                      // optional override, clamped to 1..6
 }
 ```
 
@@ -303,10 +305,16 @@ Messages are categorized by direction and purpose:
     "black_player": "player2", 
     "your_color": "white",  // varies per client
     "opponent_username": "player2",
+    "opponent_is_ai": false,
+    "ai_depth": 2,
     "opponent_rating": 1500,
     "time_control": "10+0"  // optional
 }
 ```
+
+**AI flow**:
+- `AI_CHALLENGE` -> `AI_CHALLENGE_SENT` -> `MATCH_STARTED`
+- If AI plays first, client will receive `OPPONENT_MOVE` immediately after `MATCH_STARTED`.
 
 #### CHALLENGE_CANCELLED
 **Purpose**: Notify player that a challenge was cancelled (UNSOLICITED)
@@ -442,7 +450,9 @@ Messages are categorized by direction and purpose:
     "is_check": false,
     "captured_piece": null,  // or "pawn", "knight", etc.
     "time_remaining": 600,  // seconds
-    "timestamp": 1700000001
+    "timestamp": 1700000001,
+    "ai_think_ms": 187,       // only for AI games
+    "ai_nodes_searched": 1524 // only for AI games
 }
 ```
 
@@ -453,8 +463,8 @@ Messages are categorized by direction and purpose:
 {
     "type": "GAME_ENDED",
     "game_id": 456,
-    "result": "white_win",  // "white_win", "black_win", "draw"
-    "reason": "checkmate",  // "checkmate", "resignation", "timeout", "draw_agreement", "stalemate"
+    "result": "WHITE_WIN",  // "WHITE_WIN", "BLACK_WIN", "DRAW"
+    "reason": "checkmate",  // may also be "ai_timeout" or "ai_no_move"
     "winner": "player1",
     "loser": "player2",
     "final_board": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR",
