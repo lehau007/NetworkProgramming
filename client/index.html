@@ -381,6 +381,31 @@
             margin: 0;
             opacity: 0.9;
         }
+
+        .ai-options {
+            margin: 12px 0;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .ai-options h4 {
+            margin: 0 0 8px 0;
+            font-size: 15px;
+            color: #cfe8ff;
+        }
+
+        .ai-options label {
+            display: block;
+            margin: 4px 0;
+            cursor: pointer;
+        }
+
+        .ai-telemetry {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #ffd180;
+        }
     </style>
 </head>
 
@@ -437,6 +462,7 @@
 
             <div id="player-list"></div>
             <button onclick="getAvailablePlayers()">Refresh Players</button>
+            <button onclick="openAIChallengeModal()">Challenge AI</button>
             <button onclick="logout()">Logout</button>
         </div>
 
@@ -448,9 +474,38 @@
             <div class="panel">
                 <h2>Game Info</h2>
                 <div id="game-state"></div>
+                <div id="ai-thinking-indicator" class="ai-telemetry" style="display: none;">AI is thinking...</div>
+                <div id="ai-last-metrics" class="ai-telemetry" style="display: none;"></div>
                 <div id="messages"></div>
                 <button onclick="resign()">Resign</button>
                 <button onclick="offerDraw()">Offer Draw</button>
+            </div>
+        </div>
+
+        <!-- AI Challenge Modal -->
+        <div id="ai-challenge-modal" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Challenge AI</h2>
+                    <button class="modal-close" onclick="closeAIChallengeModal()">×</button>
+                </div>
+
+                <div class="ai-options">
+                    <h4>Difficulty</h4>
+                    <label><input type="radio" name="ai-difficulty" value="easy"> Easy (Depth 1)</label>
+                    <label><input type="radio" name="ai-difficulty" value="medium" checked> Medium (Depth 2)</label>
+                    <label><input type="radio" name="ai-difficulty" value="hard"> Hard (Depth 4)</label>
+                </div>
+
+                <div class="ai-options">
+                    <h4>Your Color</h4>
+                    <label><input type="radio" name="ai-color" value="white"> White</label>
+                    <label><input type="radio" name="ai-color" value="black"> Black</label>
+                    <label><input type="radio" name="ai-color" value="random" checked> Random</label>
+                </div>
+
+                <button onclick="submitAIChallenge()">Start AI Game</button>
+                <button onclick="closeAIChallengeModal()">Cancel</button>
             </div>
         </div>
 

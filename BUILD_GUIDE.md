@@ -210,6 +210,20 @@ if __name__ == "__main__":
 
 ---
 
+## AI Mode Validation (Manual)
+
+1. Open lobby and click `Challenge AI`.
+2. Choose difficulty (`easy|medium|hard`) and color (`white|black|random`).
+3. Verify server sends `AI_CHALLENGE_SENT` then `MATCH_STARTED`.
+4. Play 3-5 moves and verify:
+    - `OPPONENT_MOVE` arrives after each human move.
+    - AI telemetry appears in payload: `ai_think_ms`, `ai_nodes_searched`.
+5. Validate timeout/failure behavior:
+    - On AI timeout, client receives error code `AI_TIMEOUT`.
+    - `GAME_ENDED.reason` is `ai_timeout` or `ai_no_move` when AI cannot continue.
+
+---
+
 ## Complete Gameplay Test Flow
 
 ### Two Players Setup

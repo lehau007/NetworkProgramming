@@ -1,4 +1,40 @@
 export function initLobby({ state, ui, send, clearSession }) {
+    function openAIChallengeModal() {
+        const modal = document.getElementById('ai-challenge-modal');
+        modal?.classList.add('show');
+    }
+
+    function closeAIChallengeModal() {
+        const modal = document.getElementById('ai-challenge-modal');
+        modal?.classList.remove('show');
+    }
+
+    function submitAIChallenge() {
+        if (!state.sessionId) {
+            alert('Not logged in');
+            return;
+        }
+
+        const difficultyChoice = document.querySelector('input[name="ai-difficulty"]:checked');
+        const colorChoice = document.querySelector('input[name="ai-color"]:checked');
+
+        const difficulty = difficultyChoice ? difficultyChoice.value : 'medium';
+        const preferredColor = colorChoice ? colorChoice.value : 'random';
+
+        const depthMap = { easy: 1, medium: 2, hard: 4 };
+        const depth = depthMap[difficulty] ?? 2;
+
+        send({
+            type: 'AI_CHALLENGE',
+            session_id: state.sessionId,
+            preferred_color: preferredColor,
+            difficulty,
+            depth,
+        });
+
+        closeAIChallengeModal();
+    }
+
     function updateUserProfile(data) {
         if (!data) return;
 
@@ -112,6 +148,12 @@ export function initLobby({ state, ui, send, clearSession }) {
                 return true;
             }
 
+            case 'AI_CHALLENGE_SENT':
+                if (msg.status === 'accepted') {
+                    return true;
+                }
+                return false;
+
             default:
                 return false;
         }
@@ -121,11 +163,17 @@ export function initLobby({ state, ui, send, clearSession }) {
     window.getAvailablePlayers = getAvailablePlayers;
     window.challengePlayer = challengePlayer;
     window.logout = logout;
+    window.openAIChallengeModal = openAIChallengeModal;
+    window.closeAIChallengeModal = closeAIChallengeModal;
+    window.submitAIChallenge = submitAIChallenge;
 
     return {
         handleMessage,
         getAvailablePlayers,
         updateUserProfile,
         reloadUserProfile,
+        openAIChallengeModal,
+        closeAIChallengeModal,
+        submitAIChallenge,
     };
 }

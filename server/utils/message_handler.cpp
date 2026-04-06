@@ -4,6 +4,14 @@
 #include <iostream>
 #include <ctime>
 
+namespace {
+int depth_from_difficulty(const std::string& difficulty) {
+    if (difficulty == "easy") return 1;
+    if (difficulty == "hard") return 4;
+    return 2;
+}
+}
+
 MessageHandler::MessageHandler(int socket, std::string ip_address) : client_socket(socket), ip_address(ip_address) {
     session_mgr = SessionManager::get_instance();
     match_mgr = MatchManager::get_instance();
@@ -496,14 +504,34 @@ void MessageHandler::handle_ai_challenge(const json& request) {
         ? request["preferred_color"].get<std::string>()
         : "random";
 
-    int depth = 2;
+    if (preferred_color != "white" && preferred_color != "black" && preferred_color != "random") {
+        send_error("INVALID_PREFERRED_COLOR", "preferred_color must be white, black, or random");
+        return;
+    }
+
+    std::string difficulty = "medium";
+    if (request.contains("difficulty")) {
+        try {
+            difficulty = request["difficulty"].get<std::string>();
+        } catch (...) {
+            difficulty = "medium";
+        }
+        if (difficulty != "easy" && difficulty != "medium" && difficulty != "hard") {
+            send_error("INVALID_DIFFICULTY", "difficulty must be easy, medium, or hard");
+            return;
+        }
+    }
+
+    int depth = depth_from_difficulty(difficulty);
     if (request.contains("depth")) {
         try {
             depth = request["depth"].get<int>();
         } catch (...) {
-            depth = 2;
+            depth = depth_from_difficulty(difficulty);
         }
     }
+    if (depth < 1) depth = 1;
+    if (depth > 6) depth = 6;
 
     // Send AI_CHALLENGE_SENT first (per spec)
     json ai_challenge_sent_response;
@@ -534,6 +562,7 @@ void MessageHandler::handle_ai_challenge(const json& request) {
     std::cout << "[MessageHandler] AI game created: " << game_id
               << " for user " << session->username
               << " preferred_color=" << preferred_color
+              << " difficulty=" << difficulty
               << " depth=" << depth << std::endl;
 }
 
@@ -706,7 +735,32 @@ void MessageHandler::handle_move(const json& request) {
     json response;
     int opponent_id;
     if (match_mgr->make_move(game_id, session->user_id, move, response, opponent_id)) {
+        json ai_followup_move;
+        json ai_followup_error;
+        bool has_ai_followup_move = false;
+        bool has_ai_followup_error = false;
+
+        if (response.contains("ai_followup_move")) {
+            ai_followup_move = response["ai_followup_move"];
+            response.erase("ai_followup_move");
+            has_ai_followup_move = true;
+        }
+        if (response.contains("ai_followup_error")) {
+            ai_followup_error = response["ai_followup_error"];
+            response.erase("ai_followup_error");
+            has_ai_followup_error = true;
+        }
+
         send_response(response);
+
+        // Preserve client ordering: acknowledge human move first, then push AI follow-up.
+        if (has_ai_followup_move) {
+            broadcast_to_user(session->user_id, ai_followup_move);
+        }
+        if (has_ai_followup_error) {
+            broadcast_to_user(session->user_id, ai_followup_error);
+        }
+
         std::cout << "[MessageHandler] Move executed: " << move << " in game " << game_id << std::endl;
     } else {
         json rejection;

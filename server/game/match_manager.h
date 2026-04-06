@@ -38,6 +38,8 @@ struct GameInstance {
     bool white_draw_offered;
     bool black_draw_offered;
     int ai_depth;  // Only used when one player is AI (-1)
+    int ai_think_ms;
+    long long ai_nodes_searched;
 };
 
 // Callback for broadcasting messages
